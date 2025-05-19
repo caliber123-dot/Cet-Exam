@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Exam - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/admin-dashboard.html">Dashboard</a>
+                <!-- <a href="/manage-exams.html">Manage Exams</a>
+                <a href="/manage-questions.html">Manage Questions</a>
+                <a href="/reports.html">Reports</a> -->
+                <a href="/create-exam.html" class="active">Manage Exams</a>
+                <a href="/add-question.html">Manage Questions</a>
+                <a href="/admin-dashboard.html">Reports</a>
+            </div>
+            <div class="user-menu">
+                <span id="user-role-indicator" class="role-badge admin">Admin</span>
+                <span id="user-name">Admin</span>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Create New Exam</h1>
+        
+        <div class="card">
+            <div class="card-header">Exam Details</div>
+            <div class="card-body">
+                <form id="create-exam-form">
+                    <div class="form-group">
+                        <label for="exam-title">Exam Title</label>
+                        <input type="text" id="exam-title" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="exam-description">Description</label>
+                        <textarea id="exam-description" class="form-control" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="exam-duration">Duration (minutes)</label>
+                        <input type="number" id="exam-duration" class="form-control" min="5" max="180" value="60" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Categories</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="category-reasoning" value="reasoning">
+                                <label for="category-reasoning">Reasoning</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="category-english" value="english">
+                                <label for="category-english">English</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="category-computer" value="computer_concepts">
+                                <label for="category-computer">Computer Concepts</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="category-python" value="python">
+                                <label for="category-python">Python</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Question Selection</label>
+                        <div id="question-selection" class="question-selection">
+                            <div class="loading">Loading questions...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Create Exam</button>
+                        <a href="/admin-dashboard.html" class="btn btn-secondary">Cancel</a>
+                    </div>
+                    
+                    <div id="create-exam-error" class="error-message" style="display: none;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            const examService = new ExamService();
+            
+            // Check authentication and admin role
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            if (!authService.isAdmin()) {
+                window.location.href = '/';
+                return;
+            }
+            
+            // Display user information
+            const user = authService.getUser();
+            document.getElementById('user-name').textContent = user.displayName;
+            
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                authService.logout();
+            });
+            
+            // Load questions for selection
+            loadQuestions();
+            
+            // Handle category selection changes
+            const categoryCheckboxes = document.querySelectorAll('.checkbox-group input[type="checkbox"]');
+            categoryCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', loadQuestions);
+            });
+            
+            // Handle form submission
+            document.getElementById('create-exam-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    // Get form data
+                    const title = document.getElementById('exam-title').value;
+                    const description = document.getElementById('exam-description').value;
+                    const durationMinutes = parseInt(document.getElementById('exam-duration').value);
+                    
+                    // Get selected categories
+                    const categories = [];
+                    categoryCheckboxes.forEach(checkbox => {
+                        if (checkbox.checked) {
+                            categories.push(checkbox.value);
+                        }
+                    });
+                    
+                    if (categories.length === 0) {
+                        throw new Error('Please select at least one category');
+                    }
+                    
+                    // Get selected questions
+                    const questionCheckboxes = document.querySelectorAll('.question-item input[type="checkbox"]:checked');
+                    const questionIds = Array.from(questionCheckboxes).map(checkbox => checkbox.value);
+                    
+                    if (questionIds.length === 0) {
+                        throw new Error('Please select at least one question');
+                    }
+                    
+                    // Create exam
+                    await examService.createExam(title, description, durationMinutes, questionIds, categories);
+                    
+                    // Redirect to manage exams page
+                    alert('Exam created successfully!');
+                    window.location.href = '/manage-exams.html';
+                } catch (error) {
+                    const errorElement = document.getElementById('create-exam-error');
+                    errorElement.textContent = error.message || 'Failed to create exam';
+                    errorElement.style.display = 'block';
+                }
+            });
+            
+            async function loadQuestions() {
+                try {
+                    const questionSelection = document.getElementById('question-selection');
+                    questionSelection.innerHTML = '<div class="loading">Loading questions...</div>';
+                    
+                    // Get selected categories
+                    const selectedCategories = [];
+                    categoryCheckboxes.forEach(checkbox => {
+                        if (checkbox.checked) {
+                            selectedCategories.push(checkbox.value);
+                        }
+                    });
+                    
+                    // If no categories selected, show message
+                    if (selectedCategories.length === 0) {
+                        questionSelection.innerHTML = '<div class="info-message">Please select at least one category to view questions</div>';
+                        return;
+                    }
+                    
+                    // Get questions for selected categories
+                    const questions = await examService.getQuestionsByCategories(selectedCategories);
+                    
+                    if (questions.length === 0) {
+                        questionSelection.innerHTML = '<div class="info-message">No questions found for selected categories</div>';
+                        return;
+                    }
+                    
+                    // Display questions
+                    questionSelection.innerHTML = '';
+                    
+                    // Group questions by category
+                    const questionsByCategory = {};
+                    questions.forEach(question => {
+                        if (!questionsByCategory[question.category]) {
+                            questionsByCategory[question.category] = [];
+                        }
+                        questionsByCategory[question.category].push(question);
+                    });
+                    
+                    // Create question list by category
+                    for (const [category, categoryQuestions] of Object.entries(questionsByCategory)) {
+                        const categoryName = category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        
+                        const categorySection = document.createElement('div');
+                        categorySection.className = 'question-category';
+                        categorySection.innerHTML = `<h3>${categoryName}</h3>`;
+                        
+                        const questionList = document.createElement('div');
+                        questionList.className = 'question-list';
+                        
+                        categoryQuestions.forEach(question => {
+                            const questionItem = document.createElement('div');
+                            questionItem.className = 'question-item';
+                            questionItem.innerHTML = `
+                                <div class="question-checkbox">
+                                    <input type="checkbox" id="question-${question.id}" value="${question.id}">
+                                </div>
+                                <div class="question-content">
+                                    <label for="question-${question.id}">${question.text}</label>
+                                    <div class="question-difficulty">Difficulty: ${getDifficultyLabel(question.difficulty_level)}</div>
+                                </div>
+                            `;
+                            questionList.appendChild(questionItem);
+                        });
+                        
+                        categorySection.appendChild(questionList);
+                        questionSelection.appendChild(categorySection);
+                    }
+                } catch (error) {
+                    console.error('Error loading questions:', error);
+                    questionSelection.innerHTML = `<div class="error-message">Error loading questions: ${error.message}</div>`;
+                }
+            }
+            
+            function getDifficultyLabel(level) {
+                switch (level) {
+                    case 1: return 'Easy';
+                    case 2: return 'Medium';
+                    case 3: return 'Hard';
+                    default: return 'Medium';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+myenv
+__pycache__
+.env
+app2.py
+todo.md
+postgresql_migration_plan.md
+

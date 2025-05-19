@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .role-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            background-color: var(--light-bg-color);
+            border-radius: 30px;
+            padding: 5px;
+            width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .role-toggle-btn {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 50%;
+            color: var(--text-color);
+        }
+        
+        .role-toggle-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .role-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+            color: white;
+        }
+        
+        .role-badge.admin {
+            background-color: #dc3545;
+        }
+        
+        .role-badge.student {
+            background-color: #28a745;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+        }
+        
+        .registration-success {
+            background-color: var(--success-color);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="auth-container">
+            <!-- Registration success message -->
+            <div id="registration-success" class="registration-success">
+                Registration successful! Please login with your credentials.
+            </div>
+            
+            <div class="card">
+                <div class="card-header">Login</div>
+                <div class="card-body">
+                    <div class="role-toggle">
+                        <button id="student-toggle" class="role-toggle-btn active">Student</button>
+                        <button id="admin-toggle" class="role-toggle-btn">Admin</button>
+                    </div>
+                    
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">Login</button>
+                        </div>
+                        <div id="login-error" class="error-message" style="color: var(--danger-color); display: none;"></div>
+                    </form>
+                    <p>Don't have an account? <a href="/register.html">Register here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            
+            // Redirect if already logged in
+            if (authService.isAuthenticated()) {
+                if (authService.isAdmin()) {
+                    window.location.href = '/admin-dashboard.html';
+                } else {
+                    window.location.href = '/';
+                }
+                return;
+            }
+            
+            // Check for registration success parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('registered') === 'true') {
+                document.getElementById('registration-success').style.display = 'block';
+                // Remove the parameter from URL to prevent issues on refresh
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+                
+                // Set role toggle based on the role parameter
+                const role = urlParams.get('role');
+                if (role === 'admin') {
+                    setActiveToggle('admin');
+                } else {
+                    setActiveToggle('student');
+                }
+            }
+            
+            // Role toggle functionality
+            const studentToggle = document.getElementById('student-toggle');
+            const adminToggle = document.getElementById('admin-toggle');
+            let currentRole = 'student'; // Default role
+            
+            studentToggle.addEventListener('click', function() {
+                setActiveToggle('student');
+            });
+            
+            adminToggle.addEventListener('click', function() {
+                setActiveToggle('admin');
+            });
+            
+            function setActiveToggle(role) {
+                currentRole = role;
+                
+                if (role === 'student') {
+                    studentToggle.classList.add('active');
+                    adminToggle.classList.remove('active');
+                } else {
+                    adminToggle.classList.add('active');
+                    studentToggle.classList.remove('active');
+                }
+            }
+            
+            // Handle login form submission
+            document.getElementById('login-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const errorElement = document.getElementById('login-error');
+                
+                try {
+                    errorElement.style.display = 'none';
+                    const user = await authService.login(email, password);
+                    
+                    // Check if user role matches selected role
+                    if (user.role !== currentRole) {
+                        if (currentRole === 'admin') {
+                            errorElement.textContent = 'Access denied. This login is for administrators only.';
+                        } else {
+                            errorElement.textContent = 'Access denied. This login is for students only.';
+                        }
+                        errorElement.style.display = 'block';
+                        authService.logout(); // Log out user with incorrect role
+                        return;
+                    }
+                    
+                    // Redirect based on role
+                    if (user.role === 'admin') {
+                        window.location.href = '/admin-dashboard.html';
+                    } else {
+                        window.location.href = '/';
+                    }
+                } catch (error) {
+                    errorElement.textContent = error.message || 'Login failed. Please check your credentials.';
+                    errorElement.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

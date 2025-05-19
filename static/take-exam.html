@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Exam - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .options-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background-color: var(--light-bg-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .option-item:hover {
+            background-color: rgba(74, 109, 167, 0.1);
+        }
+        
+        .option-item.selected {
+            background-color: rgba(74, 109, 167, 0.2);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .option-radio {
+            margin-right: 15px;
+        }
+        
+        .option-text {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/exams.html">Exams</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="exam-header">
+            <h1 id="exam-title">Loading exam...</h1>
+            <div id="exam-info">
+                <p id="exam-description"></p>
+                <div id="exam-meta">
+                    <span id="exam-duration"></span>
+                    <span id="exam-categories"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="exam-timer" class="exam-timer">
+            Time Remaining: <span id="timer-display">--:--</span>
+        </div>
+        
+        <div id="exam-progress" class="exam-progress">
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div id="progress-text">Question 0 of 0</div>
+        </div>
+        
+        <div id="question-container" class="question-container">
+            <!-- Questions will be loaded here dynamically -->
+            <div class="loading">Loading questions...</div>
+        </div>
+        
+        <div id="exam-navigation" class="exam-navigation">
+            <button id="prev-btn" class="btn btn-secondary" disabled>Previous</button>
+            <button id="next-btn" class="btn btn-primary">Next</button>
+            <button id="submit-btn" class="btn btn-success" style="display: none;">Submit Exam</button>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            const examService = new ExamService();
+            
+            // Check authentication
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Get exam ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const examId = urlParams.get('id');
+            
+            if (!examId) {
+                window.location.href = '/exams.html';
+                return;
+            }
+            
+            // Exam state variables
+            let examData = null;
+            let questions = [];
+            let currentQuestionIndex = 0;
+            let userAnswers = {};
+            let timerInterval = null;
+            let timeRemaining = 0;
+            
+            // Load exam data
+            loadExam();
+            
+            // Add navigation event listeners
+            document.getElementById('prev-btn').addEventListener('click', goToPreviousQuestion);
+            document.getElementById('next-btn').addEventListener('click', goToNextQuestion);
+            document.getElementById('submit-btn').addEventListener('click', confirmSubmitExam);
+            
+            async function loadExam() {
+                try {
+                    // Get exam with questions
+                    examData = await examService.getExam(examId, true);
+                    
+                    if (!examData || !examData.question_data || examData.question_data.length === 0) {
+                        alert('Error: Exam has no questions');
+                        window.location.href = '/exams.html';
+                        return;
+                    }
+                    
+                    // Set exam info
+                    document.getElementById('exam-title').textContent = examData.title;
+                    document.getElementById('exam-description').textContent = examData.description;
+                    document.getElementById('exam-duration').textContent = `Duration: ${examData.duration_minutes} minutes`;
+                    
+                    // Format categories
+                    const categories = examData.categories.map(cat => {
+                        return cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    }).join(', ');
+                    document.getElementById('exam-categories').textContent = `Categories: ${categories}`;
+                    
+                    // Set up questions
+                    questions = examData.question_data;
+                    
+                    // Initialize timer
+                    timeRemaining = examData.duration_minutes * 60;
+                    startTimer();
+                    
+                    // Show first question
+                    showQuestion(0);
+                    
+                    // Update progress
+                    updateProgress();
+                    
+                } catch (error) {
+                    console.error('Error loading exam:', error);
+                    alert(`Error loading exam: ${error.message}`);
+                    window.location.href = '/exams.html';
+                }
+            }
+            
+            function showQuestion(index) {
+                if (index < 0 || index >= questions.length) {
+                    return;
+                }
+                
+                currentQuestionIndex = index;
+                const question = questions[index];
+                
+                const container = document.getElementById('question-container');
+                container.innerHTML = '';
+                
+                // Create question element
+                const questionElement = document.createElement('div');
+                questionElement.className = 'question';
+                
+                // Question text
+                const questionText = document.createElement('div');
+                questionText.className = 'question-text';
+                questionText.textContent = `${index + 1}. ${question.text}`;
+                questionElement.appendChild(questionText);
+                
+                // Options list
+                const optionsList = document.createElement('ul');
+                optionsList.className = 'options-list';
+                
+                // Create a unique name for the radio button group based on question ID
+                const radioGroupName = `question-${question.id}`;
+                
+                question.options.forEach(option => {
+                    const optionItem = document.createElement('li');
+                    optionItem.className = 'option-item';
+                    
+                    // Check if this option is selected
+                    if (userAnswers[question.id] === option.id) {
+                        optionItem.classList.add('selected');
+                    }
+                    
+                    // Create radio button
+                    const radioInput = document.createElement('input');
+                    radioInput.type = 'radio';
+                    radioInput.name = radioGroupName;
+                    radioInput.id = `option-${option.id}`;
+                    radioInput.value = option.id;
+                    radioInput.className = 'option-radio';
+                    radioInput.checked = userAnswers[question.id] === option.id;
+                    
+                    // Create label for radio button
+                    const radioLabel = document.createElement('label');
+                    radioLabel.htmlFor = `option-${option.id}`;
+                    radioLabel.className = 'option-text';
+                    radioLabel.textContent = option.text;
+                    
+                    // Add radio button and label to option item
+                    optionItem.appendChild(radioInput);
+                    optionItem.appendChild(radioLabel);
+                    
+                    // Add click event to the entire option item
+                    optionItem.addEventListener('click', function(e) {
+                        // If clicking directly on the radio button, let the default behavior happen
+                        if (e.target === radioInput) {
+                            return;
+                        }
+                        
+                        // Otherwise, check the radio button programmatically
+                        radioInput.checked = true;
+                        
+                        // Remove selected class from all options
+                        optionsList.querySelectorAll('.option-item').forEach(item => {
+                            item.classList.remove('selected');
+                        });
+                        
+                        // Add selected class to clicked option
+                        this.classList.add('selected');
+                        
+                        // Save answer
+                        userAnswers[question.id] = option.id;
+                        
+                        // Update progress
+                        updateProgress();
+                    });
+                    
+                    // Add change event to the radio button
+                    radioInput.addEventListener('change', function() {
+                        if (this.checked) {
+                            // Remove selected class from all options
+                            optionsList.querySelectorAll('.option-item').forEach(item => {
+                                item.classList.remove('selected');
+                            });
+                            
+                            // Add selected class to parent option item
+                            optionItem.classList.add('selected');
+                            
+                            // Save answer
+                            userAnswers[question.id] = option.id;
+                            
+                            // Update progress
+                            updateProgress();
+                        }
+                    });
+                    
+                    optionsList.appendChild(optionItem);
+                });
+                
+                questionElement.appendChild(optionsList);
+                container.appendChild(questionElement);
+                
+                // Update navigation buttons
+                document.getElementById('prev-btn').disabled = index === 0;
+                
+                if (index === questions.length - 1) {
+                    document.getElementById('next-btn').style.display = 'none';
+                    document.getElementById('submit-btn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('next-btn').style.display = 'inline-block';
+                    document.getElementById('submit-btn').style.display = 'none';
+                }
+            }
+            
+            function goToPreviousQuestion() {
+                if (currentQuestionIndex > 0) {
+                    showQuestion(currentQuestionIndex - 1);
+                }
+            }
+            
+            function goToNextQuestion() {
+                if (currentQuestionIndex < questions.length - 1) {
+                    showQuestion(currentQuestionIndex + 1);
+                }
+            }
+            
+            function updateProgress() {
+                const answeredCount = Object.keys(userAnswers).length;
+                const totalCount = questions.length;
+                const progressPercent = (answeredCount / totalCount) * 100;
+                
+                document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+                document.getElementById('progress-text').textContent = `Question ${currentQuestionIndex + 1} of ${totalCount} (${answeredCount} answered)`;
+            }
+            
+            function startTimer() {
+                updateTimerDisplay();
+                
+                timerInterval = setInterval(() => {
+                    timeRemaining--;
+                    
+                    if (timeRemaining <= 0) {
+                        clearInterval(timerInterval);
+                        alert('Time is up! Your exam will be submitted automatically.');
+                        submitExam();
+                    } else {
+                        updateTimerDisplay();
+                    }
+                }, 1000);
+            }
+            
+            function updateTimerDisplay() {
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                
+                document.getElementById('timer-display').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Change color when time is running low
+                if (timeRemaining < 60) {
+                    document.getElementById('timer-display').style.color = 'var(--danger-color)';
+                } else if (timeRemaining < 300) {
+                    document.getElementById('timer-display').style.color = 'var(--warning-color)';
+                }
+            }
+            
+            function confirmSubmitExam() {
+                const answeredCount = Object.keys(userAnswers).length;
+                const totalCount = questions.length;
+                
+                if (answeredCount < totalCount) {
+                    const unansweredCount = totalCount - answeredCount;
+                    if (!confirm(`You have ${unansweredCount} unanswered question(s). Are you sure you want to submit the exam?`)) {
+                        return;
+                    }
+                } else {
+                    if (!confirm('Are you sure you want to submit the exam?')) {
+                        return;
+                    }
+                }
+                
+                submitExam();
+            }
+            
+            async function submitExam() {
+                try {
+                    // Stop timer
+                    clearInterval(timerInterval);
+                    
+                    // Submit exam
+                    const result = await examService.submitExam(examId, userAnswers);
+                    
+                    // Redirect to results page
+                    window.location.href = `/result.html?id=${result.resultId}`;
+                } catch (error) {
+                    console.error('Error submitting exam:', error);
+                    alert(`Error submitting exam: ${error.message}`);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

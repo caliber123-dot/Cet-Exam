@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .role-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            background-color: var(--light-bg-color);
+            border-radius: 30px;
+            padding: 5px;
+            width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .role-toggle-btn {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 50%;
+            color: var(--text-color);
+        }
+        
+        .role-toggle-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="auth-container">
+            <div class="card">
+                <div class="card-header">Register</div>
+                <div class="card-body">
+                    <div class="role-toggle">
+                        <button id="student-toggle" class="role-toggle-btn active">Student</button>
+                        <button id="admin-toggle" class="role-toggle-btn">Admin</button>
+                    </div>
+                    
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="display-name">Full Name</label>
+                            <input type="text" id="display-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">Confirm Password</label>
+                            <input type="password" id="confirm-password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">Register</button>
+                        </div>
+                        <div id="register-error" class="error-message" style="color: var(--danger-color); display: none;"></div>
+                    </form>
+                    <p>Already have an account? <a href="/login.html">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            
+            // Redirect if already logged in
+            if (authService.isAuthenticated()) {
+                if (authService.isAdmin()) {
+                    window.location.href = '/admin-dashboard.html';
+                } else {
+                    window.location.href = '/';
+                }
+                return;
+            }
+            
+            // Role toggle functionality
+            const studentToggle = document.getElementById('student-toggle');
+            const adminToggle = document.getElementById('admin-toggle');
+            let currentRole = 'student'; // Default role
+            
+            studentToggle.addEventListener('click', function() {
+                setActiveToggle('student');
+            });
+            
+            adminToggle.addEventListener('click', function() {
+                setActiveToggle('admin');
+            });
+            
+            function setActiveToggle(role) {
+                currentRole = role;
+                
+                if (role === 'student') {
+                    studentToggle.classList.add('active');
+                    adminToggle.classList.remove('active');
+                } else {
+                    adminToggle.classList.add('active');
+                    studentToggle.classList.remove('active');
+                }
+            }
+            
+            // Handle registration form submission
+            document.getElementById('register-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const displayName = document.getElementById('display-name').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+                const errorElement = document.getElementById('register-error');
+                
+                // Validate passwords match
+                if (password !== confirmPassword) {
+                    errorElement.textContent = 'Passwords do not match';
+                    errorElement.style.display = 'block';
+                    return;
+                }
+                
+                try {
+                    errorElement.style.display = 'none';
+                    await authService.register(email, password, displayName, currentRole);
+                    // Redirect to login page after successful registration
+                    window.location.href = `/login.html?registered=true&role=${currentRole}`;
+                } catch (error) {
+                    errorElement.textContent = error.message || 'Registration failed. Please try again.';
+                    errorElement.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

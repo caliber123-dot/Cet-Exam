@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/exams.html">Exams</a>
+                <a href="/results.html">Results</a>
+                <a href="/profile.html">Profile</a>
+                <a href="#" id="logout-btn" style="display: none;">Logout</a>
+                <a href="/login.html" id="login-btn">Login</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero-section">
+            <h1>Welcome to CET Exam App</h1>
+            <p>Prepare for your Common Entrance Test with our interactive exam platform</p>
+            <div class="cta-buttons">
+                <a href="/exams.html" class="btn btn-primary">Start Practicing</a>
+                <a href="/register.html" class="btn btn-secondary">Register Now</a>
+            </div>
+        </div>
+
+        <div class="features-section">
+            <h2>Key Features</h2>
+            <div class="feature-cards">
+                <div class="card">
+                    <div class="card-header">Multiple Subjects</div>
+                    <div class="card-body">
+                        <p>Practice with questions from Reasoning, English, Computer Concepts, and Python programming.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Instant Grading</div>
+                    <div class="card-body">
+                        <p>Get immediate results with detailed explanations for each question.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">AI Recommendations</div>
+                    <div class="card-body">
+                        <p>Receive personalized recommendations based on your performance.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Performance Tracking</div>
+                    <div class="card-body">
+                        <p>Track your progress with detailed reports and analytics.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            
+            // Update UI based on authentication status
+            if (authService.isAuthenticated()) {
+                document.getElementById('login-btn').style.display = 'none';
+                document.getElementById('logout-btn').style.display = 'inline-block';
+            } else {
+                document.getElementById('login-btn').style.display = 'inline-block';
+                document.getElementById('logout-btn').style.display = 'none';
+            }
+            
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                authService.logout();
+            });
+        });
+    </script>
+</body>
+</html>

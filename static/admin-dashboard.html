@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/admin-dashboard.html" class="active">Dashboard</a>
+                <!-- <a href="/manage-exams.html">Manage Exams</a>
+                <a href="/manage-questions.html">Manage Questions</a>
+                <a href="/reports.html">Reports</a> -->
+                 <a href="/create-exam.html">Manage Exams</a>
+                <a href="/add-question.html">Manage Questions</a>
+                <a href="/admin-dashboard.html">Reports</a>
+            </div>
+            <div class="user-menu">
+                <span id="user-role-indicator" class="role-badge admin">Admin</span>
+                <span id="user-name">Admin</span>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-title">Total Exams</div>
+                <div id="total-exams" class="stat-value">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Questions</div>
+                <div id="total-questions" class="stat-value">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Students</div>
+                <div id="total-students" class="stat-value">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Exams Taken</div>
+                <div id="exams-taken" class="stat-value">0</div>
+            </div>
+        </div>
+        
+        <div class="dashboard-actions">
+            <div class="action-card">
+                <h3>Create New Exam</h3>
+                <p>Create a new exam with questions from different categories.</p>
+                <a href="/create-exam.html" class="btn btn-primary">Create Exam</a>
+            </div>
+            <div class="action-card">
+                <h3>Add New Question</h3>
+                <p>Add a new question to the question bank.</p>
+                <a href="/add-question.html" class="btn btn-primary">Add Question</a>
+            </div>
+            <div class="action-card">
+                <h3>View Reports</h3>
+                <p>View detailed reports of student performance.</p>
+                <a href="/reports.html" class="btn btn-primary">View Reports</a>
+            </div>
+            <div class="action-card">
+                <h3>Manage Users</h3>
+                <p>Manage student and admin accounts.</p>
+                <a href="/manage-users.html" class="btn btn-primary">Manage Users</a>
+            </div>
+        </div>
+        
+        <div class="recent-activity">
+            <h2>Recent Activity</h2>
+            <div id="activity-list" class="activity-list">
+                <div class="loading">Loading recent activity...</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            
+            // Check authentication and admin role
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            if (!authService.isAdmin()) {
+                window.location.href = '/';
+                return;
+            }
+            
+            // Display user information
+            const user = authService.getUser();
+            document.getElementById('user-name').textContent = user.displayName;
+            
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                authService.logout();
+            });
+            
+            // Load dashboard data
+            loadDashboardData();
+            
+            async function loadDashboardData() {
+                try {
+                    // This would be replaced with actual API calls
+                    // For now, we'll use placeholder data
+                    document.getElementById('total-exams').textContent = '5';
+                    document.getElementById('total-questions').textContent = '50';
+                    document.getElementById('total-students').textContent = '20';
+                    document.getElementById('exams-taken').textContent = '35';
+                    
+                    // Load recent activity
+                    const activityList = document.getElementById('activity-list');
+                    activityList.innerHTML = `
+                        <div class="activity-item">
+                            <div class="activity-time">Today, 10:30 AM</div>
+                            <div class="activity-description">New student registered: John Doe</div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-time">Today, 9:15 AM</div>
+                            <div class="activity-description">Exam completed: Python Basics by Jane Smith</div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-time">Yesterday, 3:45 PM</div>
+                            <div class="activity-description">New question added in Computer Concepts</div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-time">Yesterday, 1:20 PM</div>
+                            <div class="activity-description">New exam created: Advanced Reasoning</div>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Error loading dashboard data:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

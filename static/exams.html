@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exams - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/exams.html" class="active">Exams</a>
+                <a href="/results.html">Results</a>
+                <a href="/profile.html">Profile</a>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Available Exams</h1>
+        
+        <div class="admin-controls" style="display: none;">
+            <button id="create-exam-btn" class="btn btn-primary">Create New Exam</button>
+            <button id="manage-questions-btn" class="btn btn-secondary">Manage Questions</button>
+        </div>
+        
+        <div class="exam-filters">
+            <div class="form-group">
+                <label for="category-filter">Filter by Category:</label>
+                <select id="category-filter" class="form-control">
+                    <option value="all">All Categories</option>
+                    <option value="computer_basics">Computer Basics</option>
+                    <option value="python">Python Language</option>
+                    <option value="reasoning">Reasoning</option>
+                    <option value="english">English</option>                    
+                    <option value="gk">General Knowledge</option>                    
+                </select>
+            </div>
+        </div>
+        
+        <div id="exams-container" class="exams-grid">
+            <!-- Exams will be loaded here dynamically -->
+            <div class="loading">Loading exams...</div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            const examService = new ExamService();
+            
+            // Check authentication
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Show admin controls if user is admin
+            if (authService.isAdmin()) {
+                document.querySelector('.admin-controls').style.display = 'block';
+            }
+            
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                authService.logout();
+            });
+            
+            // Load exams
+            loadExams();
+            
+            // Add filter functionality
+            document.getElementById('category-filter').addEventListener('change', function() {
+                loadExams(this.value);
+            });
+            
+            // Function to load exams
+            async function loadExams(category = 'all') {
+                const container = document.getElementById('exams-container');
+                container.innerHTML = '<div class="loading">Loading exams...</div>';
+                
+                try {
+                    const exams = await examService.getExams(true);
+                    
+                    if (exams.length === 0) {
+                        container.innerHTML = '<div class="no-exams">No exams available.</div>';
+                        return;
+                    }
+                    
+                    // Filter exams by category if needed
+                    let filteredExams = exams;
+                    if (category !== 'all') {
+                        filteredExams = exams.filter(exam => 
+                            exam.categories.includes(category)
+                        );
+                    }
+                    
+                    if (filteredExams.length === 0) {
+                        container.innerHTML = '<div class="no-exams">No exams found for this category.</div>';
+                        return;
+                    }
+                    
+                    // Render exams
+                    container.innerHTML = '';
+                    filteredExams.forEach(exam => {
+                        const examCard = document.createElement('div');
+                        examCard.className = 'card exam-card';
+                        
+                        const categories = exam.categories.map(cat => {
+                            // Convert category to readable format
+                            return cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        }).join(', ');
+                        
+                        examCard.innerHTML = `
+                            <div class="card-header">${exam.title}</div>
+                            <div class="card-body">
+                                <p>${exam.description}</p>
+                                <p><strong>Categories:</strong> ${categories}</p>
+                                <p><strong>Duration:</strong> ${exam.duration_minutes} minutes</p>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-primary start-exam-btn" data-exam-id="${exam.id}">Start Exam</button>
+                            </div>
+                        `;
+                        
+                        container.appendChild(examCard);
+                    });
+                    
+                    // Add event listeners to start exam buttons
+                    document.querySelectorAll('.start-exam-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const examId = this.getAttribute('data-exam-id');
+                            window.location.href = `/take-exam.html?id=${examId}`;
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error('Error loading exams:', error);
+                    container.innerHTML = `<div class="error">Error loading exams: ${error.message}</div>`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

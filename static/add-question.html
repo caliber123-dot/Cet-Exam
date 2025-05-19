@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Question - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/admin-dashboard.html">Dashboard</a>
+                <!-- <a href="/manage-exams.html">Manage Exams</a>
+                <a href="/manage-questions.html" class="active">Manage Questions</a>
+                <a href="/reports.html">Reports</a> -->
+                <a href="/create-exam.html">Manage Exams</a>
+                <a href="/add-question.html" class="active">Manage Questions</a>
+                <a href="/admin-dashboard.html">Reports</a>
+            </div>
+            <div class="user-menu">
+                <span id="user-role-indicator" class="role-badge admin">Admin</span>
+                <span id="user-name">Admin</span>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Add New Question</h1>
+
+        <div class="card">
+            <div class="card-header">Question Details</div>
+            <div class="card-body">
+                <form id="add-question-form">
+                    <div class="form-group">
+                        <label for="question-text">Question Text</label>
+                        <textarea id="question-text" class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="question-category">Category</label>
+                        <select id="question-category" class="form-control" required>
+                            <option value="">Select Category</option>
+                            <option value="computer_basics">Computer Basics</option>
+                            <option value="python">Python Language</option>
+                            <option value="reasoning">Reasoning</option>
+                            <option value="english">English</option>
+                            <option value="gk">General Knowledge</option>                           
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="question-difficulty">Difficulty Level</label>
+                        <select id="question-difficulty" class="form-control" required>
+                            <option value="1">Easy</option>
+                            <option value="2" selected>Medium</option>
+                            <option value="3">Hard</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Options</label>
+                        <div id="options-container">
+                            <div class="option-item">
+                                <div class="option-radio">
+                                    <input type="radio" name="correct-option" id="option-correct-1" value="1" required>
+                                    <label for="option-correct-1">Correct</label>
+                                </div>
+                                <div class="option-text">
+                                    <input type="text" id="option-text-1" class="form-control" placeholder="Option 1"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="option-item">
+                                <div class="option-radio">
+                                    <input type="radio" name="correct-option" id="option-correct-2" value="2">
+                                    <label for="option-correct-2">Correct</label>
+                                </div>
+                                <div class="option-text">
+                                    <input type="text" id="option-text-2" class="form-control" placeholder="Option 2"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="option-item">
+                                <div class="option-radio">
+                                    <input type="radio" name="correct-option" id="option-correct-3" value="3">
+                                    <label for="option-correct-3">Correct</label>
+                                </div>
+                                <div class="option-text">
+                                    <input type="text" id="option-text-3" class="form-control" placeholder="Option 3"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="option-item">
+                                <div class="option-radio">
+                                    <input type="radio" name="correct-option" id="option-correct-4" value="4">
+                                    <label for="option-correct-4">Correct</label>
+                                </div>
+                                <div class="option-text">
+                                    <input type="text" id="option-text-4" class="form-control" placeholder="Option 4"
+                                        required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="question-explanation">Explanation</label>
+                        <textarea id="question-explanation" class="form-control" rows="4" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Add Question</button>
+                        <a href="/manage-questions.html" class="btn btn-secondary">Cancel</a>
+                    </div>
+
+                    <div id="add-question-error" class="error-message" style="display: none;"></div>
+                    <div id="add-question-success" class="success-message" style="display: none;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const authService = new AuthService();
+            const examService = new ExamService();
+
+            // Check authentication and admin role
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            if (!authService.isAdmin()) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Display user information
+            const user = authService.getUser();
+            document.getElementById('user-name').textContent = user.displayName;
+
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function (e) {
+                e.preventDefault();
+                authService.logout();
+            });
+
+            // Handle form submission
+            document.getElementById('add-question-form').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                try {
+                    // Get form data
+                    const text = document.getElementById('question-text').value;
+                    const category = document.getElementById('question-category').value;
+                    const difficultyLevel = parseInt(document.getElementById('question-difficulty').value);
+                    const explanation = document.getElementById('question-explanation').value;
+
+                    // Get options
+                    const options = [];
+                    const correctOption = document.querySelector('input[name="correct-option"]:checked').value;
+
+                    for (let i = 1; i <= 4; i++) {
+                        options.push({
+                            text: document.getElementById(`option-text-${i}`).value,
+                            is_correct: i.toString() === correctOption
+                        });
+                    }
+
+                    // Create question
+                    await examService.createQuestion(text, category, options, explanation, difficultyLevel);
+
+                    // Show success message
+                    const successElement = document.getElementById('add-question-success');
+                    successElement.textContent = 'Question added successfully!';
+                    successElement.style.display = 'block';
+
+                    // Reset form
+                    document.getElementById('add-question-form').reset();
+
+                    // Hide success message after 3 seconds
+                    setTimeout(() => {
+                        successElement.style.display = 'none';
+                    }, 3000);
+                } catch (error) {
+                    const errorElement = document.getElementById('add-question-error');
+                    errorElement.textContent = error.message || 'Failed to add question';
+                    errorElement.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

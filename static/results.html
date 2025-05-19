@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/exams.html">Exams</a>
+                <a href="/results.html" class="active">Results</a>
+                <a href="/profile.html">Profile</a>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Your Exam Results</h1>
+        
+        <div id="results-summary" class="card">
+            <div class="card-header">Performance Summary</div>
+            <div class="card-body">
+                <div id="summary-chart-container" style="width: 100%; max-width: 600px; margin: 0 auto;">
+                    <canvas id="summary-chart"></canvas>
+                </div>
+                <div id="summary-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Exams Taken</div>
+                        <div id="exams-count" class="stat-value">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Average Score</div>
+                        <div id="average-score" class="stat-value">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Best Score</div>
+                        <div id="best-score" class="stat-value">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="results-container">
+            <div class="loading">Loading your results...</div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            const examService = new ExamService();
+            
+            // Check authentication
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                authService.logout();
+            });
+            
+            // Load user results
+            loadResults();
+            
+            async function loadResults() {
+                try {
+                    const user = authService.getUser();
+                    const results = await examService.getUserResults(user.uid);
+                    
+                    if (results.length === 0) {
+                        document.getElementById('results-container').innerHTML = 
+                            '<div class="no-results">You haven\'t taken any exams yet. <a href="/exams.html">Start an exam now</a>.</div>';
+                        return;
+                    }
+                    
+                    // Update summary stats
+                    updateSummaryStats(results);
+                    
+                    // Create summary chart
+                    createSummaryChart(results);
+                    
+                    // Render results list
+                    renderResultsList(results);
+                    
+                } catch (error) {
+                    console.error('Error loading results:', error);
+                    document.getElementById('results-container').innerHTML = 
+                        `<div class="error">Error loading results: ${error.message}</div>`;
+                }
+            }
+            
+            function updateSummaryStats(results) {
+                // Calculate stats
+                const examCount = results.length;
+                
+                const scores = results.map(result => result.score);
+                const avgScore = scores.reduce((sum, score) => sum + score, 0) / examCount;
+                const bestScore = Math.max(...scores);
+                
+                // Update DOM
+                document.getElementById('exams-count').textContent = examCount;
+                document.getElementById('average-score').textContent = `${Math.round(avgScore)}%`;
+                document.getElementById('best-score').textContent = `${Math.round(bestScore)}%`;
+            }
+            
+            function createSummaryChart(results) {
+                // Sort results by completion date
+                const sortedResults = [...results].sort((a, b) => 
+                    new Date(a.completed_at) - new Date(b.completed_at)
+                );
+                
+                // Extract data for chart
+                const labels = sortedResults.map(result => {
+                    const date = new Date(result.completed_at);
+                    return date.toLocaleDateString();
+                });
+                
+                const scores = sortedResults.map(result => result.score);
+                
+                // Create chart
+                const ctx = document.getElementById('summary-chart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Score (%)',
+                            data: scores,
+                            borderColor: 'var(--primary-color)',
+                            backgroundColor: 'rgba(74, 109, 167, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function renderResultsList(results) {
+                const container = document.getElementById('results-container');
+                container.innerHTML = '';
+                
+                // Sort results by completion date (newest first)
+                const sortedResults = [...results].sort((a, b) => 
+                    new Date(b.completed_at) - new Date(a.completed_at)
+                );
+                
+                // Create results list
+                sortedResults.forEach(async (result) => {
+                    try {
+                        // Get exam data
+                        const exam = await examService.getExam(result.exam_id, false);
+                        
+                        // Create result card
+                        const resultCard = document.createElement('div');
+                        resultCard.className = 'card result-card';
+                        
+                        // Format date
+                        const date = new Date(result.completed_at);
+                        const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                        
+                        // Get score class
+                        const scoreClass = getScoreClass(result.score);
+                        
+                        resultCard.innerHTML = `
+                            <div class="card-header">${exam.title}</div>
+                            <div class="card-body">
+                                <div class="result-score ${scoreClass}">${Math.round(result.score)}%</div>
+                                <div class="result-date">Completed on: ${formattedDate}</div>
+                                <div class="result-categories">
+                                    Categories: ${exam.categories.map(cat => 
+                                        cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                    ).join(', ')}
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <a href="/result.html?id=${result.id}" class="btn btn-primary">View Details</a>
+                            </div>
+                        `;
+                        
+                        container.appendChild(resultCard);
+                    } catch (error) {
+                        console.error('Error loading exam data:', error);
+                    }
+                });
+            }
+            
+            function getScoreClass(score) {
+                if (score >= 80) return 'score-excellent';
+                if (score >= 60) return 'score-good';
+                if (score >= 40) return 'score-average';
+                return 'score-poor';
+            }
+        });
+    </script>
+</body>
+</html>

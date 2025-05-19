@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .profile-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-right: 20px;
+        }
+        
+        .profile-info {
+            flex: 1;
+        }
+        
+        .profile-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+        }
+        
+        .profile-email {
+            font-size: 1rem;
+            color: var(--secondary-text-color);
+            margin: 0 0 5px 0;
+        }
+        
+        .profile-role {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .profile-role.admin {
+            background-color: var(--info-color);
+        }
+        
+        .profile-role.student {
+            background-color: var(--success-color);
+        }
+        
+        .profile-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--light-bg-color);
+            border-radius: 8px;
+        }
+        
+        .profile-section h2 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--secondary-text-color);
+        }
+        
+        .recent-exams {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .exam-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            transition: transform 0.2s ease;
+        }
+        
+        .exam-item:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-shadow);
+        }
+        
+        .exam-info {
+            flex: 1;
+        }
+        
+        .exam-title {
+            font-weight: 500;
+            margin: 0 0 5px 0;
+        }
+        
+        .exam-date {
+            font-size: 0.8rem;
+            color: var(--secondary-text-color);
+        }
+        
+        .exam-score {
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
+        .score-excellent {
+            background-color: rgba(40, 167, 69, 0.2);
+            color: var(--success-color);
+        }
+        
+        .score-good {
+            background-color: rgba(23, 162, 184, 0.2);
+            color: var(--info-color);
+        }
+        
+        .score-average {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: var(--warning-color);
+        }
+        
+        .score-poor {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: var(--danger-color);
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary-text-color);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/exams.html">Exams</a>
+                <a href="/results.html">Results</a>
+                <a href="/profile.html" class="active">Profile</a>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="profile-container" class="profile-container">
+            <div class="loading">Loading profile...</div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const authService = new AuthService();
+            const examService = new ExamService();
+            
+            // Check authentication
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Add logout functionality
+            document.getElementById('logout-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                authService.logout();
+            });
+            
+            // Load user profile
+            loadProfile();
+            
+            async function loadProfile() {
+                try {
+                    // Get user data
+                    const user = authService.getUser();
+                    
+                    if (!user) {
+                        alert('Error: User not found');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    // Get user results
+                    const results = await examService.getUserResults(user.uid);
+                    
+                    // Render profile
+                    renderProfile(user, results);
+                    
+                } catch (error) {
+                    console.error('Error loading profile:', error);
+                    alert(`Error loading profile: ${error.message}`);
+                }
+            }
+            
+            function renderProfile(user, results) {
+                const container = document.getElementById('profile-container');
+                container.innerHTML = '';
+                
+                // Create profile header
+                const profileHeader = document.createElement('div');
+                profileHeader.className = 'profile-header';
+                
+                // Create avatar with initials
+                const avatar = document.createElement('div');
+                avatar.className = 'profile-avatar';
+                avatar.textContent = getInitials(user.displayName);
+                profileHeader.appendChild(avatar);
+                
+                // Create profile info
+                const profileInfo = document.createElement('div');
+                profileInfo.className = 'profile-info';
+                
+                const profileName = document.createElement('h1');
+                profileName.className = 'profile-name';
+                profileName.textContent = user.displayName;
+                profileInfo.appendChild(profileName);
+                
+                const profileEmail = document.createElement('p');
+                profileEmail.className = 'profile-email';
+                profileEmail.textContent = user.email;
+                profileInfo.appendChild(profileEmail);
+                
+                const profileRole = document.createElement('div');
+                profileRole.className = `profile-role ${user.role}`;
+                profileRole.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+                profileInfo.appendChild(profileRole);
+                
+                profileHeader.appendChild(profileInfo);
+                container.appendChild(profileHeader);
+                
+                // Create statistics section
+                const statsSection = document.createElement('div');
+                statsSection.className = 'profile-section';
+                statsSection.innerHTML = '<h2>Your Statistics</h2>';
+                
+                const statsGrid = document.createElement('div');
+                statsGrid.className = 'stats-grid';
+                
+                // Calculate statistics
+                const totalExams = results.length;
+                const completedExams = results.filter(r => r.completed_at).length;
+                
+                let totalScore = 0;
+                let highestScore = 0;
+                
+                results.forEach(result => {
+                    totalScore += result.score;
+                    if (result.score > highestScore) {
+                        highestScore = result.score;
+                    }
+                });
+                
+                const averageScore = totalExams > 0 ? totalScore / totalExams : 0;
+                
+                // Create stat items
+                const statItems = [
+                    { label: 'Total Exams', value: totalExams },
+                    { label: 'Completed', value: completedExams },
+                    { label: 'Average Score', value: `${Math.round(averageScore)}%` },
+                    { label: 'Highest Score', value: `${Math.round(highestScore)}%` }
+                ];
+                
+                statItems.forEach(item => {
+                    const statItem = document.createElement('div');
+                    statItem.className = 'stat-item';
+                    
+                    const statValue = document.createElement('div');
+                    statValue.className = 'stat-value';
+                    statValue.textContent = item.value;
+                    statItem.appendChild(statValue);
+                    
+                    const statLabel = document.createElement('div');
+                    statLabel.className = 'stat-label';
+                    statLabel.textContent = item.label;
+                    statItem.appendChild(statLabel);
+                    
+                    statsGrid.appendChild(statItem);
+                });
+                
+                statsSection.appendChild(statsGrid);
+                container.appendChild(statsSection);
+                
+                // Create recent exams section
+                const recentExamsSection = document.createElement('div');
+                recentExamsSection.className = 'profile-section';
+                recentExamsSection.innerHTML = '<h2>Recent Exams</h2>';
+                
+                if (results.length > 0) {
+                    const examsList = document.createElement('ul');
+                    examsList.className = 'recent-exams';
+                    
+                    // Sort results by date (newest first)
+                    const sortedResults = [...results].sort((a, b) => {
+                        return new Date(b.completed_at) - new Date(a.completed_at);
+                    });
+                    
+                    // Show up to 5 most recent exams
+                    const recentResults = sortedResults.slice(0, 5);
+                    
+                    recentResults.forEach(result => {
+                        const examItem = document.createElement('li');
+                        examItem.className = 'exam-item';
+                        
+                        const examInfo = document.createElement('div');
+                        examInfo.className = 'exam-info';
+                        
+                        const examTitle = document.createElement('div');
+                        examTitle.className = 'exam-title';
+                        examTitle.textContent = result.exam_title || 'Exam';
+                        examInfo.appendChild(examTitle);
+                        
+                        const examDate = document.createElement('div');
+                        examDate.className = 'exam-date';
+                        examDate.textContent = formatDate(result.completed_at);
+                        examInfo.appendChild(examDate);
+                        
+                        examItem.appendChild(examInfo);
+                        
+                        const examScore = document.createElement('div');
+                        examScore.className = `exam-score ${getScoreClass(result.score)}`;
+                        examScore.textContent = `${Math.round(result.score)}%`;
+                        examItem.appendChild(examScore);
+                        
+                        // Add click event to view result
+                        examItem.addEventListener('click', function() {
+                            window.location.href = `/result.html?id=${result.id}`;
+                        });
+                        
+                        examsList.appendChild(examItem);
+                    });
+                    
+                    recentExamsSection.appendChild(examsList);
+                } else {
+                    const noData = document.createElement('div');
+                    noData.className = 'no-data';
+                    noData.textContent = 'You have not taken any exams yet.';
+                    recentExamsSection.appendChild(noData);
+                }
+                
+                container.appendChild(recentExamsSection);
+            }
+            
+            function getInitials(name) {
+                if (!name) return '?';
+                
+                const parts = name.split(' ');
+                if (parts.length === 1) {
+                    return parts[0].charAt(0).toUpperCase();
+                }
+                
+                return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+            }
+            
+            function formatDate(dateString) {
+                if (!dateString) return 'Unknown date';
+                
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            
+            function getScoreClass(score) {
+                if (score >= 80) return 'score-excellent';
+                if (score >= 60) return 'score-good';
+                if (score >= 40) return 'score-average';
+                return 'score-poor';
+            }
+        });
+    </script>
+</body>
+</html>
