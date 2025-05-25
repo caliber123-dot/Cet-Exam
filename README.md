@@ -1,10 +1,13 @@
 # CET Exam App - PostgreSQL Deployment Documentation
-
-## Overview
+<h3>📝 Overview :</h3> 
 
 The CET Exam App is a comprehensive online examination platform designed for Common Entrance Tests. The application features a Python Flask backend, interactive frontend with HTML/CSS/JS, and PostgreSQL database integration.
 
-## Features
+<h3>🌐 Web Link:</h3>
+
+<h4> Live Site: https://cet-exam.onrender.com/ </h4>
+
+### 📃 Features :
 
 - **Exam Builder**: Create MCQs with explanations across multiple subjects (Reasoning, English, Computer Concepts, Python)
 - **Auto-Grading**: Instant results with detailed explanations
@@ -15,7 +18,7 @@ The CET Exam App is a comprehensive online examination platform designed for Com
 - **Responsive Design**: Works on all devices
 - **PostgreSQL Database**: Robust relational database for data storage
 
-## Technical Architecture
+### 🛠️ Technologies Used
 
 ### Backend
 - **Framework**: Python Flask
