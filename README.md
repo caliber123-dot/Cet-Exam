@@ -1,4 +1,4 @@
-# CET Exam App - Prepare for your CET with our interactive exam platform
+## CET Exam App - Prepare for your CET with our interactive exam platform
 <h3>📝 Overview :</h3> 
 
 The CET Exam App is a comprehensive online examination platform designed for Common Entrance Tests. The application features a Python Flask backend, interactive frontend with HTML/CSS/JS, and PostgreSQL database integration.
