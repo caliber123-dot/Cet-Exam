@@ -9,7 +9,7 @@ from typing import List, Dict, Optional, Union
 from database import db
 from models.sql_models import (
     Question, Option, Exam, ExamCategory, ExamQuestion, 
-    User, SubjectCategory
+    User, SubjectCategory, SubjectCategoryModel
 )
 
 class ExamService:
@@ -63,7 +63,8 @@ class ExamService:
                 db.session.add(option)
             
             db.session.commit()
-            return question.uuid
+            # ensure return value is a plain string (sqlalchemy may return ColumnElement)
+            return str(question.uuid)
         except Exception as e:
             db.session.rollback()
             print(f"Error creating question: {e}")
@@ -199,7 +200,7 @@ class ExamService:
                     db.session.add(exam_question)
             
             db.session.commit()
-            return exam.uuid
+            return str(exam.uuid)
         except Exception as e:
             db.session.rollback()
             print(f"Error creating exam: {e}")
@@ -295,6 +296,70 @@ class ExamService:
         except Exception as e:
             print(f"Error getting exams: {e}")
             return []
+
+    def get_exams_by_categories(self, categories: List[str], active_only: bool = True) -> List[Exam]:
+        """Return exams that belong to any of the specified categories.
+
+        The query performs a join against the `ExamCategory` table and
+        filters by the provided list of category names. If ``active_only`` is
+        True, only active exams are included. Duplicates are removed via
+        ``distinct()`` to avoid multiple rows per exam when it matches more
+        than one category.
+        """
+        try:
+            query = Exam.query.join(ExamCategory)
+            from sqlalchemy import true
+            if active_only:
+                # compare with SQL expression to satisfy type checker
+                # Pylance incorrectly infers bool; ignore the type check
+                query = query.filter(Exam.is_active.is_(True))  # type: ignore
+            # SQLAlchemy ``in_`` is available on column elements; cast the
+            # categories list to ``List[str]`` above to make pylance happy.
+            # categories is List[str], and category column supports in_
+            query = query.filter(ExamCategory.category.in_(categories))  # type: ignore
+            # ensure one row per exam
+            return query.distinct().all()
+        except Exception as e:
+            print(f"Error filtering exams by categories: {e}")
+            return []
+
+    # category management
+    def list_categories(self) -> List[SubjectCategoryModel]:
+        """Return all subject categories from the database."""
+        try:
+            return SubjectCategoryModel.query.all()
+        except Exception as e:
+            print(f"Error listing categories: {e}")
+            return []
+
+    def add_category(self, name: str) -> SubjectCategoryModel:
+        """Add a new category with the given name. Raises on duplicate."""
+        try:
+            existing = SubjectCategoryModel.query.filter_by(name=name).first()
+            if existing:
+                return existing
+            category = SubjectCategoryModel(name=name)
+            db.session.add(category)
+            db.session.commit()
+            return category
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error adding category: {e}")
+            raise
+
+    def delete_category(self, category_id: int) -> bool:
+        """Remove a subject category by its database ID."""
+        try:
+            cat = SubjectCategoryModel.query.get(category_id)
+            if not cat:
+                return False
+            db.session.delete(cat)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error deleting category: {e}")
+            return False
     
     def get_exam_with_questions(self, exam_id: str) -> Optional[Dict]:
         """

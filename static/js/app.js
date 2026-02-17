@@ -199,17 +199,70 @@ class ExamService {
         this.authService = new AuthService();
     }
     
-    async getExams(activeOnly = true) {
+    async getExams(activeOnly = true, category = null) {
         try {
-            const response = await this.authService.getAuthenticatedRequest(
-                `${this.apiUrl}/exams?active_only=${activeOnly}`
-            );
+            let url = `${this.apiUrl}/exams?active_only=${activeOnly}`;
+            if (category) {
+                // allow either single category string or array of strings
+                if (Array.isArray(category)) {
+                    url += `&categories=${category.map(encodeURIComponent).join(',')}`;
+                } else {
+                    url += `&category=${encodeURIComponent(category)}`;
+                }
+            }
+            const response = await this.authService.getAuthenticatedRequest(url);
             
             // Safe to parse JSON for successful responses
             const data = await response.json();
             return data.exams;
         } catch (error) {
             console.error('Error fetching exams:', error);
+            throw error;
+        }
+    }
+
+    // categories
+    async listCategories() {
+        try {
+            const response = await this.authService.getAuthenticatedRequest(
+                `${this.apiUrl}/categories`
+            );
+            const data = await response.json();
+            return data.categories;
+        } catch (error) {
+            console.error('Error listing categories:', error);
+            throw error;
+        }
+    }
+
+    async createCategory(name) {
+        try {
+            const response = await this.authService.getAuthenticatedRequest(
+                `${this.apiUrl}/categories`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                }
+            );
+            const data = await response.json();
+            return data.category;
+        } catch (error) {
+            console.error('Error creating category:', error);
+            throw error;
+        }
+    }
+
+    async deleteCategory(categoryId) {
+        try {
+            const response = await this.authService.getAuthenticatedRequest(
+                `${this.apiUrl}/categories/${categoryId}`,
+                { method: 'DELETE' }
+            );
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error deleting category:', error);
             throw error;
         }
     }
@@ -287,12 +340,13 @@ class ExamService {
     
     async getQuestionsByCategories(categories) {
         try {
-            // Convert categories array to comma-separated string
-            const categoriesParam = categories.join(',');
-            
-            const response = await this.authService.getAuthenticatedRequest(
-                `${this.apiUrl}/questions?categories=${categoriesParam}`
-            );
+            let url = `${this.apiUrl}/questions`;
+            if (categories && categories.length) {
+                // Convert categories array to comma-separated string
+                const categoriesParam = categories.join(',');
+                url += `?categories=${encodeURIComponent(categoriesParam)}`;
+            }
+            const response = await this.authService.getAuthenticatedRequest(url);
             
             // Safe to parse JSON for successful responses
             const data = await response.json();

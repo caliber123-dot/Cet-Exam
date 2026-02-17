@@ -55,8 +55,7 @@ class UserService:
             # Save to database
             db.session.add(user)
             db.session.commit()
-            
-            return user.uid
+            return str(user.uid)
         except Exception as e:
             db.session.rollback()
             print(f"Error creating user: {e}")

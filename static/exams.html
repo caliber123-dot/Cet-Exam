@@ -41,16 +41,7 @@
                 <label for="category-filter">Filter by Category:</label>
                 <select id="category-filter" class="form-control">
                     <option value="all">All Categories</option>
-                    <option value="computer_basics">Computer Basics</option>
-                    <option value="python">Python Language</option>
-                    <option value="reasoning">Reasoning</option>
-                    <option value="english">English</option>                    
-                    <option value="gk">General Knowledge</option>                    
-                </select>
-            </div>
-        </div>
-        
-        <div id="exams-container" class="exams-grid">
+
             <!-- Exams will be loaded here dynamically -->
             <div class="loading">Loading exams...</div>
         </div>
@@ -85,7 +76,10 @@
                 authService.logout();
             });
             
-            // Load exams
+            // Load categories into filter
+            await populateCategoryFilter();
+
+            // Load exams initially
             loadExams();
             
             // Add filter functionality
@@ -93,35 +87,41 @@
                 loadExams(this.value);
             });
             
+            // Function to populate the category dropdown from backend
+            async function populateCategoryFilter() {
+                try {
+                    const select = document.getElementById('category-filter');
+                    // clear existing options except "all"
+                    select.innerHTML = '<option value="all">All Categories</option>';
+                    const categories = await examService.listCategories();
+                    categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.name;
+                        opt.textContent = cat.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        select.appendChild(opt);
+                    });
+                } catch (error) {
+                    console.error('Failed to load categories for filter', error);
+                }
+            }
+
             // Function to load exams
             async function loadExams(category = 'all') {
                 const container = document.getElementById('exams-container');
                 container.innerHTML = '<div class="loading">Loading exams...</div>';
                 
                 try {
-                    const exams = await examService.getExams(true);
+                    // fetch exams, possibly filtered by category on the backend
+                const exams = await examService.getExams(true, category === 'all' ? null : category);
                     
                     if (exams.length === 0) {
-                        container.innerHTML = '<div class="no-exams">No exams available.</div>';
-                        return;
-                    }
-                    
-                    // Filter exams by category if needed
-                    let filteredExams = exams;
-                    if (category !== 'all') {
-                        filteredExams = exams.filter(exam => 
-                            exam.categories.includes(category)
-                        );
-                    }
-                    
-                    if (filteredExams.length === 0) {
-                        container.innerHTML = '<div class="no-exams">No exams found for this category.</div>';
+                        container.innerHTML = `<div class="no-exams">${category === 'all' ? 'No exams available.' : 'No exams found for this category.'}</div>`;
                         return;
                     }
                     
                     // Render exams
                     container.innerHTML = '';
-                    filteredExams.forEach(exam => {
+                    exams.forEach(exam => {
                         const examCard = document.createElement('div');
                         examCard.className = 'card exam-card';
                         

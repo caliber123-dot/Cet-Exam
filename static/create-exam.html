@@ -18,6 +18,8 @@
                 <a href="/reports.html">Reports</a> -->
                 <a href="/create-exam.html" class="active">Manage Exams</a>
                 <a href="/add-question.html">Manage Questions</a>
+                <a href="/multiple-add-question.html">Bulk Upload</a>
+                <a href="/category-master.html">Manage Subjects</a>
                 <a href="/admin-dashboard.html">Reports</a>
             </div>
             <div class="user-menu">
@@ -58,24 +60,9 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Categories</label>
-                        <div class="checkbox-group">
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="category-reasoning" value="reasoning">
-                                <label for="category-reasoning">Reasoning</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="category-english" value="english">
-                                <label for="category-english">English</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="category-computer" value="computer_concepts">
-                                <label for="category-computer">Computer Concepts</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="checkbox" id="category-python" value="python">
-                                <label for="category-python">Python</label>
-                            </div>
+                        <label>Categories/Subjects</label>
+                        <div class="checkbox-group" id="category-checkboxes">
+                            <!-- populated dynamically -->
                         </div>
                     </div>
                     
@@ -95,6 +82,22 @@
                 </form>
             </div>
         </div>
+        <!-- existing exams list -->
+        <div class="card">
+            <div class="card-header">Existing Exams</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="exam-list-category-filter">Filter by Category:</label>
+                    <select id="exam-list-category-filter" class="form-control">
+                        <option value="all">All Categories</option>
+                    </select>
+                </div>
+                <div id="exams-listing" class="exams-grid">
+                    <!-- exams will be injected here -->
+                    <div class="loading">Loading exams...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <footer>
@@ -105,7 +108,7 @@
 
     <script src="/js/app.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const authService = new AuthService();
             const examService = new ExamService();
             
@@ -130,14 +133,26 @@
                 authService.logout();
             });
             
-            // Load questions for selection
-            loadQuestions();
-            
-            // Handle category selection changes
-            const categoryCheckboxes = document.querySelectorAll('.checkbox-group input[type="checkbox"]');
-            categoryCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', loadQuestions);
+            // populate category checkboxes then load questions
+            await loadCategoryCheckboxes();
+
+            // also populate the category dropdown for existing exams
+            await populateExamListCategories();
+
+            // Handle category selection changes (delegated)
+            const checkboxContainer = document.getElementById('category-checkboxes');
+            checkboxContainer.addEventListener('change', loadQuestions);
+
+            // handle exam-list filter change
+            document.getElementById('exam-list-category-filter').addEventListener('change', function() {
+                loadExistingExams(this.value);
             });
+
+            // initial question load
+            loadQuestions();
+
+            // initial exam listing load
+            loadExistingExams();
             
             // Handle form submission
             document.getElementById('create-exam-form').addEventListener('submit', async function(e) {
@@ -151,7 +166,8 @@
                     
                     // Get selected categories
                     const categories = [];
-                    categoryCheckboxes.forEach(checkbox => {
+                    const categoryBoxes = document.querySelectorAll('#category-checkboxes input[type="checkbox"]');
+                    categoryBoxes.forEach(checkbox => {
                         if (checkbox.checked) {
                             categories.push(checkbox.value);
                         }
@@ -172,9 +188,14 @@
                     // Create exam
                     await examService.createExam(title, description, durationMinutes, questionIds, categories);
                     
-                    // Redirect to manage exams page
+                    // stay on page and refresh list
                     alert('Exam created successfully!');
-                    window.location.href = '/manage-exams.html';
+                    // clear form fields
+                    document.getElementById('create-exam-form').reset();
+                    // reload existing exams and reset questions
+                    await loadCategoryCheckboxes();
+                    loadQuestions();
+                    loadExistingExams();
                 } catch (error) {
                     const errorElement = document.getElementById('create-exam-error');
                     errorElement.textContent = error.message || 'Failed to create exam';
@@ -189,7 +210,8 @@
                     
                     // Get selected categories
                     const selectedCategories = [];
-                    categoryCheckboxes.forEach(checkbox => {
+                    const checkboxes = document.querySelectorAll('#category-checkboxes input[type="checkbox"]');
+                    checkboxes.forEach(checkbox => {
                         if (checkbox.checked) {
                             selectedCategories.push(checkbox.value);
                         }
@@ -227,7 +249,8 @@
                         
                         const categorySection = document.createElement('div');
                         categorySection.className = 'question-category';
-                        categorySection.innerHTML = `<h3>${categoryName}</h3>`;
+                        // include total count and placeholder for selected count
+                        categorySection.innerHTML = `<h3>${categoryName} (<span class="total-count">${categoryQuestions.length}</span>) <span class="selected-count">[0]</span></h3>`;
                         
                         const questionList = document.createElement('div');
                         questionList.className = 'question-list';
@@ -247,6 +270,15 @@
                             questionList.appendChild(questionItem);
                         });
                         
+                        // attach listener to update selected count when any checkbox changes
+                        questionList.addEventListener('change', () => {
+                            const header = categorySection.querySelector('h3 .selected-count');
+                            if (header) {
+                                const selected = questionList.querySelectorAll('input[type="checkbox"]:checked').length;
+                                header.textContent = `[${selected}]`;
+                            }
+                        });
+                        
                         categorySection.appendChild(questionList);
                         questionSelection.appendChild(categorySection);
                     }
@@ -256,12 +288,91 @@
                 }
             }
             
+
+            async function loadCategoryCheckboxes() {
+                try {
+                    const cats = await examService.listCategories();
+                    const container = document.getElementById('category-checkboxes');
+                    container.innerHTML = '';
+                    cats.forEach(cat => {
+                        const div = document.createElement('div');
+                        div.className = 'checkbox-item';
+                        div.innerHTML = `
+                            <input type="checkbox" value="${cat.name}" id="category-${cat.id}">
+                            <label for="category-${cat.id}">${cat.name.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}</label>
+                        `;
+                        container.appendChild(div);
+                    });
+                } catch (err) {
+                    console.error('Failed to load categories', err);
+                }
+            }
+
             function getDifficultyLabel(level) {
                 switch (level) {
                     case 1: return 'Easy';
                     case 2: return 'Medium';
                     case 3: return 'Hard';
                     default: return 'Medium';
+                }
+            }
+
+            // load existing exams into the listing container, optionally filtering by category
+            async function loadExistingExams(category = 'all') {
+                const container = document.getElementById('exams-listing');
+                container.innerHTML = '<div class="loading">Loading exams...</div>';
+                try {
+                    // fetch exams from backend, passing category when not 'all'
+                const exams = await examService.getExams(true, category === 'all' ? null : category);
+                    if (exams.length === 0) {
+                        container.innerHTML = `<div class="no-exams">${category === 'all' ? 'No exams found.' : 'No exams found for this category.'}</div>`;
+                        return;
+                    }
+                    // show a total count above the list
+                    container.innerHTML = `<div class="exam-count">Total Exams: ${exams.length}</div>`;
+                    exams.forEach((exam, idx) => {
+                        const examCard = document.createElement('div');
+                        examCard.className = 'card exam-card';
+                        const categories = exam.categories.map(cat => cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ');
+                        examCard.innerHTML = `
+                            <div class="card-header">${idx + 1}. ${exam.title}</div>
+                            <div class="card-body">
+                                <p>${exam.description}</p>
+                                <p><strong>Categories:</strong> ${categories}</p>
+                                <p><strong>Duration:</strong> ${exam.duration_minutes} minutes</p>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-primary start-exam-btn" data-exam-id="${exam.id}">Start Exam</button>
+                            </div>
+                        `;
+                        container.appendChild(examCard);
+                    });
+                    document.querySelectorAll('.start-exam-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const examId = this.getAttribute('data-exam-id');
+                            window.location.href = `/take-exam.html?id=${examId}`;
+                        });
+                    });
+                } catch (error) {
+                    console.error('Error loading existing exams:', error);
+                    container.innerHTML = `<div class="error-message">Error loading exams: ${error.message}</div>`;
+                }
+            }
+
+            // populate exam-list-category-filter from backend categories
+            async function populateExamListCategories() {
+                try {
+                    const select = document.getElementById('exam-list-category-filter');
+                    select.innerHTML = '<option value="all">All Categories</option>';
+                    const cats = await examService.listCategories();
+                    cats.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.name;
+                        opt.textContent = cat.name.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+                        select.appendChild(opt);
+                    });
+                } catch (err) {
+                    console.error('Failed to load exam-list categories', err);
                 }
             }
         });

@@ -9,6 +9,7 @@ from services.exam_service import ExamService
 from services.grading_service import GradingService
 from routes.auth_routes import token_required, role_required
 from services.user_service import UserRole
+from models.sql_models import Exam, Question, User, ExamResult
 
 # Create blueprint
 exam_bp = Blueprint('exam', __name__)
@@ -70,22 +71,65 @@ def delete_question(question_id):
         
     return jsonify({'message': 'Question deleted successfully'}), 200
 
+@exam_bp.route('/categories', methods=['GET'])
+@token_required
+def list_categories():
+    """Return all subject categories."""
+    cats = exam_service.list_categories()
+    return jsonify({'categories': [c.to_dict() for c in cats]}), 200
+
+
+@exam_bp.route('/categories', methods=['POST'])
+@role_required(UserRole.ADMIN)
+def create_category():
+    """Create a new subject category (admin only)."""
+    data = request.get_json()
+    name = data.get('name')
+    if not name:
+        return jsonify({'message': 'Missing required field: name'}), 400
+    try:
+        cat = exam_service.add_category(name)
+        return jsonify({'category': cat.to_dict()}), 201
+    except Exception as e:
+        return jsonify({'message': str(e)}), 400
+
+@exam_bp.route('/categories/<int:category_id>', methods=['DELETE'])
+@role_required(UserRole.ADMIN)
+def delete_category(category_id):
+    """Delete a subject category (admin only)."""
+    success = exam_service.delete_category(category_id)
+    if not success:
+        return jsonify({'message': 'Failed to delete category'}), 400
+    return jsonify({'message': 'Category deleted successfully'}), 200
+
+
 @exam_bp.route('/questions', methods=['GET'])
 @token_required
 def get_questions():
-    """Get questions, optionally filtered by category."""
-    category = request.args.get('category')
-    if category:
-        questions = exam_service.get_questions_by_category(category)
-    else:
-        # Get all questions from all categories
-        categories = ['reasoning', 'english', 'computer_concepts', 'python']
-        questions = []
-        for cat in categories:
-            questions.extend(exam_service.get_questions_by_category(cat))
-            
-    return jsonify({'questions': [q.to_dict() for q in questions]}), 200
+    """Get questions, optionally filtered by one or more categories.
 
+    The frontend may send either a single `category` parameter or a
+    comma-separated `categories` list. If neither is provided we return
+    every question from all known categories.
+    """
+    categories_param = request.args.get('categories')
+    cat = request.args.get('category')
+    questions = []
+
+    if categories_param:
+        # split and filter out empty values
+        cats = [c.strip() for c in categories_param.split(',') if c.strip()]
+        for c in cats:
+            questions.extend(exam_service.get_questions_by_category(c))
+    elif cat:
+        questions = exam_service.get_questions_by_category(cat)
+    else:
+        # return all categories by default based on database entries
+        cats = exam_service.list_categories()
+        for c in cats:
+            questions.extend(exam_service.get_questions_by_category(c.name))
+
+    return jsonify({'questions': [q.to_dict() for q in questions]}), 200
 # Routes for exams
 @exam_bp.route('/exams', methods=['POST'])
 @role_required(UserRole.ADMIN)
@@ -151,12 +195,56 @@ def delete_exam(exam_id):
 @exam_bp.route('/exams', methods=['GET'])
 @token_required
 def get_exams():
-    """Get all exams."""
+    """Get exams, optionally filtering by activity or category.
+
+    Clients may supply `active_only` (boolean) as before. To narrow the
+    results by category they can use either the singular `category`
+    parameter (e.g. `?category=python`) or a comma-separated
+    `categories` list (`?categories=python,reasoning`). The filtering is
+    applied in the service layer which performs an efficient join query.
+    """
     active_only = request.args.get('active_only', 'true').lower() == 'true'
-    exams = exam_service.get_all_exams(active_only)
+
+    cats_param = request.args.get('categories')
+    single_cat = request.args.get('category')
+
+    if cats_param:
+        cats = [c.strip() for c in cats_param.split(',') if c.strip()]
+        exams = exam_service.get_exams_by_categories(cats, active_only)
+    elif single_cat:
+        exams = exam_service.get_exams_by_categories([single_cat], active_only)
+    else:
+        exams = exam_service.get_all_exams(active_only)
+
     return jsonify({'exams': [e.to_dict() for e in exams]}), 200
 
 # Routes for exam results
+@exam_bp.route('/stats', methods=['GET'])
+@role_required(UserRole.ADMIN)
+def get_stats():
+    """Return simple counts used by the admin dashboard.
+
+    This endpoint is deliberately lightweight and aggregates directly from
+    the ORM models rather than going through the service layer because the
+    numbers are trivial to compute. It returns a JSON object containing
+    total_exams, total_questions, total_students, and exams_taken.
+    """
+    try:
+        total_exams = Exam.query.count()
+        total_questions = Question.query.count()
+        total_students = User.query.filter_by(role=UserRole.STUDENT).count()
+        exams_taken = ExamResult.query.count()
+        return jsonify({
+            'total_exams': total_exams,
+            'total_questions': total_questions,
+            'total_students': total_students,
+            'exams_taken': exams_taken
+        }), 200
+    except Exception as e:
+        print(f"Error fetching stats: {e}")
+        return jsonify({'message': 'Failed to fetch stats'}), 500
+
+
 @exam_bp.route('/exams/<exam_id>/submit', methods=['POST'])
 @token_required
 def submit_exam(exam_id):

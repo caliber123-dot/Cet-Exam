@@ -23,11 +23,19 @@ def init_db(app):
     # Create all tables if they don't exist
     with app.app_context():
         db.create_all()
+        # seed subject categories from enum if not already present
+        from models.sql_models import SubjectCategoryModel, SubjectCategory
+        for cat in SubjectCategory:
+            if not SubjectCategoryModel.query.filter_by(name=cat.value).first():
+                db.session.add(SubjectCategoryModel(name=cat.value))
+        db.session.commit()
 
 def get_database_uri():
     """Get database URI from environment variables or use default"""
-    db_user = os.getenv('DB_USERNAME', 'postgres')
-    db_password = os.getenv('DB_PASSWORD', 'password')
+    db_user = os.getenv('DB_USERNAME', 'postgres123')
+    db_password = os.getenv('DB_PASSWORD', 'password123')
+    # print(db_user)
+    # print(db_password)
     db_host = os.getenv('DB_HOST', 'localhost')
     db_port = os.getenv('DB_PORT', '5432')
     db_name = os.getenv('DB_NAME', 'cet_exam_app')

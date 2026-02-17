@@ -18,6 +18,8 @@
                 <a href="/reports.html">Reports</a> -->
                  <a href="/create-exam.html">Manage Exams</a>
                 <a href="/add-question.html">Manage Questions</a>
+                <a href="/multiple-add-question.html">Bulk Upload</a>
+                <a href="/category-master.html">Manage Subjects</a>
                 <a href="/admin-dashboard.html">Reports</a>
             </div>
             <div class="user-menu">
@@ -67,6 +69,16 @@
                 <h3>Add New Question</h3>
                 <p>Add a new question to the question bank.</p>
                 <a href="/add-question.html" class="btn btn-primary">Add Question</a>
+            </div>
+            <div class="action-card">
+                <h3>Bulk Upload Questions</h3>
+                <p>Upload multiple questions at once via Excel file.</p>
+                <a href="/multiple-add-question.html" class="btn btn-primary">Bulk Upload</a>
+            </div>
+            <div class="action-card">
+                <h3>Manage Subjects</h3>
+                <p>Add or edit subject categories used in exams.</p>
+                <a href="/category-master.html" class="btn btn-primary">Manage Subjects</a>
             </div>
             <div class="action-card">
                 <h3>View Reports</h3>
@@ -125,14 +137,15 @@
             
             async function loadDashboardData() {
                 try {
-                    // This would be replaced with actual API calls
-                    // For now, we'll use placeholder data
-                    document.getElementById('total-exams').textContent = '5';
-                    document.getElementById('total-questions').textContent = '50';
-                    document.getElementById('total-students').textContent = '20';
-                    document.getElementById('exams-taken').textContent = '35';
+                    // fetch counts from backend
+                    const response = await authService.getAuthenticatedRequest('/api/exam/stats');
+                    const data = await response.json();
+                    document.getElementById('total-exams').textContent = data.total_exams;
+                    document.getElementById('total-questions').textContent = data.total_questions;
+                    document.getElementById('total-students').textContent = data.total_students;
+                    document.getElementById('exams-taken').textContent = data.exams_taken;
                     
-                    // Load recent activity
+                    // Load recent activity (stubbed for now)
                     const activityList = document.getElementById('activity-list');
                     activityList.innerHTML = `
                         <div class="activity-item">

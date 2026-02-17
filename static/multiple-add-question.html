@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Upload Questions - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/admin-dashboard.html">Dashboard</a>
+                <a href="/create-exam.html">Manage Exams</a>
+                <a href="/add-question.html">Manage Questions</a>
+                <a href="/multiple-add-question.html" class="active">Bulk Upload</a>
+                <a href="/category-master.html">Manage Subjects</a>
+                <a href="/admin-dashboard.html">Reports</a>
+            </div>
+            <div class="user-menu">
+                <span id="user-role-indicator" class="role-badge admin">Admin</span>
+                <span id="user-name">Admin</span>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Bulk Add Questions via Excel</h1>
+        <div class="card">
+            <div class="card-header">Upload Questions via Excel</div>
+            <div class="card-body">
+                <div class="form-group instruction-box" style="position: relative;">
+                    <p><b>Prepare an Excel file with the following columns in order:</b>
+                        <button id="copy-columns" title="Copy columns list to clipboard" class="copy-button">📋</button>
+                    </p>
+                <ol id="columns-list" style="margin-left: 20px">
+                    <li>Question</li>
+                    <li>A</li>
+                    <li>B</li>
+                    <li>C</li>
+                    <li>D</li>
+                    <li>Correct (A/B/C/D)</li>
+                    <li>Explanation</li>
+                    <li>Difficulty (1/2/3)</li>
+                </ol>
+                </div>
+                
+                <div class="form-group">
+                    <label for="excel-category">Category/Subjects (applied to all questions)</label>
+                    <select id="excel-category" class="form-control" required>
+                        <option value="">Select Category</option>
+                        <!-- populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="excel-file">Select Excel File</label>
+                    <input type="file" id="excel-file" accept=".xlsx,.xls" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <button type="button" id="process-excel" class="btn btn-primary">Upload Excel</button>
+                </div>
+                <div id="excel-error" class="error-message" style="display:none;"></div>
+                <div id="excel-success" class="success-message" style="display:none;"></div>
+            </div>
+        </div>
+        <!-- existing questions list -->
+        <div class="card">
+            <div class="card-header">Existing Questions</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="question-filter">Filter by Category:</label>
+                    <select id="question-filter" class="form-control">
+                        <option value="all">All Categories</option>
+                    </select>
+                </div>
+                <div id="questions-container" class="question-list">
+                    <div class="loading">Loading questions...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            const authService = new AuthService();
+            const examService = new ExamService();
+
+            if (!authService.isAuthenticated()) {
+                // user not logged in – show message but stay on page
+                alert('You must be logged in to access this page.');
+                // optionally could redirect to login.html or display a login link
+                return;
+            }
+
+            if (!authService.isAdmin()) {
+                // user is authenticated but not an admin
+                alert('Administrator access required.');
+                return;
+            }
+
+            const user = authService.getUser();
+            document.getElementById('user-name').textContent = user.displayName;
+
+            document.getElementById('logout-btn').addEventListener('click', function (e) {
+                e.preventDefault();
+                authService.logout();
+            });
+
+            // populate category dropdown and also the filter
+            await loadCategoryOptions();
+            await populateQuestionFilter();
+            // do not load questions until user selects a category
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '<div class="info-message">Select a category to view existing questions</div>';
+            // Excel upload logic identical to add-question.html
+            let selectedFile = null;
+            document.getElementById('excel-file').addEventListener('change', function(e) {
+                selectedFile = e.target.files[0];
+            });
+            document.getElementById('process-excel').addEventListener('click', async function() {
+                const file = selectedFile;
+                const errorElement = document.getElementById('excel-error');
+                const successElement = document.getElementById('excel-success');
+                errorElement.style.display = 'none';
+                successElement.style.display = 'none';
+
+                if (!file) {
+                    errorElement.textContent = 'Please select an Excel file first.';
+                    errorElement.style.display = 'block';
+                    return;
+                }
+
+                try {
+                    const excelCat = document.getElementById('excel-category').value;
+                    if (!excelCat) {
+                        errorElement.textContent = 'Please select a category before uploading.';
+                        errorElement.style.display = 'block';
+                        return;
+                    }
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data);
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    let createdCount = 0;
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (row.length < 8) continue;
+                        const [questionText, a, b, c, d, correct, explanation, difficulty] = row;
+                        const options = [
+                            { text: a, is_correct: correct.toString().trim().toUpperCase() === 'A' },
+                            { text: b, is_correct: correct.toString().trim().toUpperCase() === 'B' },
+                            { text: c, is_correct: correct.toString().trim().toUpperCase() === 'C' },
+                            { text: d, is_correct: correct.toString().trim().toUpperCase() === 'D' }
+                        ];
+                        const diffVal = parseInt(difficulty) || 1;
+                        try {
+                            await examService.createQuestion(questionText, excelCat, options, explanation, diffVal);
+                            createdCount++;
+                        } catch (innerErr) {
+                            console.error('Failed to add row', i, innerErr);
+                        }
+                    }
+
+                    successElement.textContent = `${createdCount} question(s) added successfully.`;
+                    successElement.style.display = 'block';
+                } catch (err) {
+                    errorElement.textContent = 'Failed to process Excel file. ' + err.message;
+                    errorElement.style.display = 'block';
+                    console.error(err);
+                }
+            });
+
+            async function loadCategoryOptions() {
+                try {
+                    const cats = await examService.listCategories();
+                    // main excel select
+                    const select = document.getElementById('excel-category');
+                    cats.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.name;
+                        opt.textContent = c.name.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+                        select.appendChild(opt);
+                    });
+                    // if question filter exists, populate it too
+                    const filter = document.getElementById('question-filter');
+                    if (filter) {
+                        cats.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c.name;
+                            opt.textContent = c.name.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+                            filter.appendChild(opt);
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to load categories for excel upload', err);
+                }
+            }
+
+            // copy column list to clipboard
+            const copyBtn = document.getElementById('copy-columns');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const list = document.getElementById('columns-list');
+                    if (!list) return;
+                    const lines = Array.from(list.children).map(li => li.textContent.trim());
+                    const text = lines.join('\n');
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('Column list copied to clipboard');
+                    }).catch(err => {
+                        console.error('Copy failed', err);
+                    });
+                });
+            }
+
+            async function populateQuestionFilter() {
+                const filter = document.getElementById('question-filter');
+                if (!filter) return;
+                filter.addEventListener('change', function () {
+                    // only fetch when a real category is chosen (ignore 'all')
+                    if (this.value === 'all') {
+                        const container = document.getElementById('questions-container');
+                        container.innerHTML = '<div class="info-message">Select a category to view existing questions</div>';
+                    } else {
+                        loadQuestionsList(this.value);
+                    }
+                });
+            }
+
+            async function loadQuestionsList(category = 'all') {
+                const container = document.getElementById('questions-container');
+                container.innerHTML = '<div class="loading">Loading questions...</div>';
+                try {
+                    // get all questions or filtered ones
+                    const cats = category === 'all' ? [] : [category];
+                    const questions = await examService.getQuestionsByCategories(cats);
+                    if (questions.length === 0) {
+                        container.innerHTML = `<div class="no-questions">${category === 'all' ? 'No questions available.' : 'No questions found for this category.'}</div>`;
+                        return;
+                    }
+                    container.innerHTML = '';
+                    questions.forEach((q, idx) => {
+                        const item = document.createElement('div');
+                        item.className = 'question-item';
+                        const catName = q.category.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+                        // include serial number
+                        item.innerHTML = `<span class="question-sr">${idx + 1}.</span> <strong>${catName}</strong>: ${q.text} <span class="question-difficulty">(Difficulty: ${getDifficultyLabel(q.difficulty_level)})</span>`;
+                        container.appendChild(item);
+                    });
+                } catch (err) {
+                    console.error('Error loading questions list', err);
+                    container.innerHTML = `<div class="error-message">Error loading questions: ${err.message}</div>`;
+                }
+            }
+
+            function getDifficultyLabel(level) {
+                switch (level) {
+                    case 1: return 'Easy';
+                    case 2: return 'Medium';
+                    case 3: return 'Hard';
+                    default: return 'Medium';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

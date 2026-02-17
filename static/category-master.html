@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Subjects - CET Exam App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">CET Exam App</div>
+            <div class="nav-links">
+                <a href="/admin-dashboard.html">Dashboard</a>
+                <a href="/create-exam.html">Manage Exams</a>
+                <a href="/add-question.html">Manage Questions</a>
+                <a href="/multiple-add-question.html">Bulk Upload</a>
+                <a href="/category-master.html" class="active">Manage Subjects</a>
+                <a href="/admin-dashboard.html">Reports</a>
+            </div>
+            <div class="user-menu">
+                <span id="user-role-indicator" class="role-badge admin">Admin</span>
+                <span id="user-name">Admin</span>
+                <a href="#" id="logout-btn">Logout</a>
+            </div>
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <span id="theme-icon" class="theme-icon">☀️</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Subject Categories</h1>
+        <div class="card">
+            <div class="card-header">Existing Subjects</div>
+            <div class="card-body">
+                <ul id="category-list" class="category-list">
+                    <li class="loading">Loading categories...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Add New Subject</div>
+            <div class="card-body">
+                <form id="add-category-form">
+                    <div class="form-group">
+                        <label for="category-name">Subject Name</label>
+                        <input type="text" id="category-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Add Subject</button>
+                    </div>
+                    <div id="category-error" class="error-message" style="display:none;"></div>
+                    <div id="category-success" class="success-message" style="display:none;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 CET Exam App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            const authService = new AuthService();
+            const examService = new ExamService();
+
+            if (!authService.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (!authService.isAdmin()) {
+                window.location.href = '/';
+                return;
+            }
+
+            const user = authService.getUser();
+            document.getElementById('user-name').textContent = user.displayName;
+            document.getElementById('logout-btn').addEventListener('click', e => { e.preventDefault(); authService.logout(); });
+
+            async function loadCategories() {
+                const list = document.getElementById('category-list');
+                list.innerHTML = '<li class="loading">Loading categories...</li>';
+                try {
+                    const cats = await examService.listCategories();
+                    if (cats.length === 0) {
+                        list.innerHTML = '<li>No subjects defined.</li>';
+                        return;
+                    }
+                    list.innerHTML = '';
+                    cats.forEach(c => {
+                        const li = document.createElement('li');
+                        li.className = 'category-item';
+                        // display name and delete button
+                        li.innerHTML = `${c.name} <button class="btn btn-link btn-sm delete-cat " data-id="${c.id}" title="Delete">🗑️</button>`;
+                        list.appendChild(li);
+                    });
+                    // attach delete handlers
+                    document.querySelectorAll('.delete-cat').forEach(btn => {
+                        btn.addEventListener('click', async function(e) {
+                            const id = this.getAttribute('data-id');
+                            if (!confirm('Are you sure you want to permanently delete this subject? This action cannot be undone.')) return;
+                            try {
+                                await examService.deleteCategory(id);
+                                loadCategories();
+                            } catch (err) {
+                                alert('Failed to delete subject: ' + err.message);
+                            }
+                        });
+                    });
+                } catch (err) {
+                    list.innerHTML = `<li class="error-message">Error: ${err.message}</li>`;
+                }
+            }
+
+            document.getElementById('add-category-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const name = document.getElementById('category-name').value.trim();
+                const errEl = document.getElementById('category-error');
+                const successEl = document.getElementById('category-success');
+                errEl.style.display = 'none';
+                successEl.style.display = 'none';
+
+                try {
+                    await examService.createCategory(name);
+                    successEl.textContent = 'Subject added successfully.';
+                    successEl.style.display = 'block';
+                    document.getElementById('category-name').value = '';
+                    loadCategories();
+                } catch (err) {
+                    errEl.textContent = err.message;
+                    errEl.style.display = 'block';
+                }
+            });
+
+            loadCategories();
+        });
+    </script>
+</body>
+</html>

@@ -10,11 +10,30 @@ from database import db
 import uuid
 
 class SubjectCategory(str, Enum):
-    """Enum for subject categories in the exam."""
+    """Enum for subject categories in the exam.
+
+    This enum is used for code references and initial seeding. The actual
+    set of categories available to administrators is stored in the
+    `SubjectCategoryModel` table, which allows adding new subjects at runtime.
+    """
     REASONING = "reasoning"
     ENGLISH = "english"
     COMPUTER_CONCEPTS = "computer_concepts"
     PYTHON = "python"
+
+
+class SubjectCategoryModel(db.Model):
+    """Database-backed subject/category record that admins can manage."""
+    __tablename__ = 'subject_categories'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name}
 
 class User(db.Model):
     """User model for authentication and role management."""
