@@ -59,9 +59,12 @@
             <div class="card">
                 <div class="card-header">Register</div>
                 <div class="card-body">
-                    <div class="role-toggle">
-                        <button id="student-toggle" class="role-toggle-btn active">Student</button>
-                        <button id="admin-toggle" class="role-toggle-btn">Admin</button>
+                    <div class="form-group">
+                        <label for="role-select">Role</label>
+                        <select id="role-select" class="form-control" aria-label="Select role">
+                            <option value="student">Student</option>
+                            <option value="admin">Admin</option>
+                        </select>
                     </div>
                     
                     <form id="register-form">
@@ -113,29 +116,17 @@
                 return;
             }
             
-            // Role toggle functionality
-            const studentToggle = document.getElementById('student-toggle');
-            const adminToggle = document.getElementById('admin-toggle');
+            // Role selection dropdown
+            const roleSelect = document.getElementById('role-select');
             let currentRole = 'student'; // Default role
             
-            studentToggle.addEventListener('click', function() {
-                setActiveToggle('student');
-            });
-            
-            adminToggle.addEventListener('click', function() {
-                setActiveToggle('admin');
+            roleSelect.addEventListener('change', function() {
+                currentRole = roleSelect.value;
             });
             
             function setActiveToggle(role) {
                 currentRole = role;
-                
-                if (role === 'student') {
-                    studentToggle.classList.add('active');
-                    adminToggle.classList.remove('active');
-                } else {
-                    adminToggle.classList.add('active');
-                    studentToggle.classList.remove('active');
-                }
+                if (roleSelect) roleSelect.value = role;
             }
             
             // Handle registration form submission
