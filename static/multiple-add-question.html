@@ -65,6 +65,23 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Question Set</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="question-set" value="Set A" checked>
+                            <span>Set A</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="question-set" value="Set B">
+                            <span>Set B</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="question-set" value="Set C">
+                            <span>Set C</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label for="excel-file">Select Excel File</label>
                     <input type="file" id="excel-file" accept=".xlsx,.xls" class="form-control" />
                 </div>
@@ -155,6 +172,7 @@
                         errorElement.style.display = 'block';
                         return;
                     }
+                    const selectedSet = document.querySelector('input[name="question-set"]:checked').value;
                     const data = await file.arrayBuffer();
                     const workbook = XLSX.read(data);
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -172,7 +190,7 @@
                         ];
                         const diffVal = parseInt(difficulty) || 1;
                         try {
-                            await examService.createQuestion(questionText, excelCat, options, explanation, diffVal);
+                            await examService.createQuestion(questionText, excelCat, options, explanation, diffVal, selectedSet);
                             createdCount++;
                         } catch (innerErr) {
                             console.error('Failed to add row', i, innerErr);
