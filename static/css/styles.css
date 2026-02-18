@@ -683,20 +683,7 @@ footer {
     color: var(--info-color);
 }
 
-/* Certificate */
-.certificate-container {
-    text-align: center;
-    margin: 30px 0;
-}
-
-.certificate-canvas {
-    max-width: 100%;
-    box-shadow: var(--card-shadow);
-}
-
-.certificate-actions {
-    margin-top: 20px;
-}
+/* Certificate styles removed */
 
 /* User menu */
 .user-menu {

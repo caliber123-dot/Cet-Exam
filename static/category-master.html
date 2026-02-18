@@ -17,11 +17,9 @@
                 <a href="/add-question.html">Manage Questions</a>
                 <a href="/multiple-add-question.html">Bulk Upload</a>
                 <a href="/category-master.html" class="active">Manage Subjects</a>
-                <a href="/admin-dashboard.html">Reports</a>
             </div>
             <div class="user-menu">
                 <span id="user-role-indicator" class="role-badge admin">Admin</span>
-                <span id="user-name">Admin</span>
                 <a href="#" id="logout-btn">Logout</a>
             </div>
             <div class="theme-switch-wrapper">
@@ -85,7 +83,6 @@
             }
 
             const user = authService.getUser();
-            document.getElementById('user-name').textContent = user.displayName;
             document.getElementById('logout-btn').addEventListener('click', e => { e.preventDefault(); authService.logout(); });
 
             async function loadCategories() {

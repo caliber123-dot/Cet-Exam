@@ -13,7 +13,7 @@ The CET Exam App is a comprehensive online examination platform designed for Com
 - **Auto-Grading**: Instant results with detailed explanations
 - **AI Recommendations**: Personalized learning recommendations based on performance
 - **User Roles**: Admin and Student access levels
-- **Interactive Reports**: Track scores, accuracy, and generate certificates
+- **Interactive Reports**: Track scores and accuracy
 - **Theme Toggle**: Switch between light and dark modes
 - **Responsive Design**: Works on all devices
 - **PostgreSQL Database**: Robust relational database for data storage
@@ -30,7 +30,7 @@ The CET Exam App is a comprehensive online examination platform designed for Com
 ### Frontend
 - **HTML/CSS/JS**: Responsive design with interactive elements
 - **Charts**: Chart.js for data visualization
-- **Certificate Generation**: Canvas-based certificate creation
+- **Certificate Generation**: (removed)
 
 ## Deployment Instructions
 
@@ -125,7 +125,7 @@ cet_exam_app/
 2. **Take Exams**: Browse available exams and start practice tests
 3. **View Results**: Get instant feedback with explanations and recommendations
 4. **Track Progress**: Monitor performance across different subjects
-5. **Download Certificates**: Generate and download certificates for completed exams
+5. **Download Certificates**: (feature removed)
 
 ## Database Schema
 

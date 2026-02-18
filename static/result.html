@@ -62,21 +62,7 @@
             padding-bottom: 5px;
         }
         
-        .certificate-preview {
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        #certificate-canvas {
-            max-width: 100%;
-            height: auto;
-            box-shadow: var(--card-shadow);
-        }
-        
-        #download-certificate {
-            display: block;
-            margin: 20px auto;
-        }
+        /* Certificate related styles removed */
         
         /* New three-column layout styles */
         .question-item {
@@ -243,14 +229,7 @@
             <div class="loading">Loading result...</div>
         </div>
         
-        <div id="certificate-section" style="display: none;">
-            <h2>Your Certificate</h2>
-            <p>Congratulations on completing the exam! You can download your certificate below.</p>
-            <div class="certificate-preview">
-                <canvas id="certificate-canvas" width="800" height="600"></canvas>
-            </div>
-            <button id="download-certificate" class="btn btn-primary">Download Certificate</button>
-        </div>
+        <!-- Certificate feature removed -->
     </div>
 
     <footer>
@@ -305,10 +284,7 @@
                     // Render result
                     renderResult(result, exam);
                     
-                    // Generate certificate if score is passing (>= 60%)
-                    if (result.score >= 60) {
-                        generateCertificate(authService.getUser(), exam, result);
-                    }
+                    // Certificate generation removed
                     
                 } catch (error) {
                     console.error('Error loading result:', error);
@@ -609,26 +585,7 @@
                 return 'score-poor';
             }
             
-            function generateCertificate(user, exam, result) {
-                // Show certificate section
-                document.getElementById('certificate-section').style.display = 'block';
-                
-                // Initialize certificate generator
-                const canvas = document.getElementById('certificate-canvas');
-                const certificateGenerator = new CertificateGenerator(canvas);
-                
-                // Generate certificate
-                certificateGenerator.generateCertificate(user, exam, result)
-                    .then(dataUrl => {
-                        // Add download button functionality
-                        document.getElementById('download-certificate').addEventListener('click', function() {
-                            certificateGenerator.downloadCertificate(dataUrl, `${user.displayName.replace(/\s+/g, '_')}_${exam.title.replace(/\s+/g, '_')}_Certificate.png`);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error generating certificate:', error);
-                    });
-            }
+            // Certificate generation removed
         });
     </script>
 </body>

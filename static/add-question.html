@@ -16,17 +16,14 @@
             <div class="nav-links">
                 <a href="/admin-dashboard.html">Dashboard</a>
                 <!-- <a href="/manage-exams.html">Manage Exams</a>
-                <a href="/manage-questions.html" class="active">Manage Questions</a>
-                <a href="/reports.html">Reports</a> -->
+                <a href="/manage-questions.html" class="active">Manage Questions</a> -->
                 <a href="/create-exam.html">Manage Exams</a>
                 <a href="/add-question.html" class="active">Manage Questions</a>
                 <a href="/multiple-add-question.html">Bulk Upload</a>
                 <a href="/category-master.html">Manage Subjects</a>
-                <a href="/admin-dashboard.html">Reports</a>
             </div>
             <div class="user-menu">
                 <span id="user-role-indicator" class="role-badge admin">Admin</span>
-                <span id="user-name">Admin</span>
                 <a href="#" id="logout-btn">Logout</a>
             </div>
             <div class="theme-switch-wrapper">
@@ -157,9 +154,8 @@
                 return;
             }
 
-            // Display user information
+            // Get user information if needed
             const user = authService.getUser();
-            document.getElementById('user-name').textContent = user.displayName;
 
             // Add logout functionality
             document.getElementById('logout-btn').addEventListener('click', function (e) {

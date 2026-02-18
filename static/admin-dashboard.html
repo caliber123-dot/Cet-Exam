@@ -14,17 +14,14 @@
             <div class="nav-links">
                 <a href="/admin-dashboard.html" class="active">Dashboard</a>
                 <!-- <a href="/manage-exams.html">Manage Exams</a>
-                <a href="/manage-questions.html">Manage Questions</a>
-                <a href="/reports.html">Reports</a> -->
+                <a href="/manage-questions.html">Manage Questions</a> -->
                  <a href="/create-exam.html">Manage Exams</a>
                 <a href="/add-question.html">Manage Questions</a>
                 <a href="/multiple-add-question.html">Bulk Upload</a>
                 <a href="/category-master.html">Manage Subjects</a>
-                <a href="/admin-dashboard.html">Reports</a>
             </div>
             <div class="user-menu">
                 <span id="user-role-indicator" class="role-badge admin">Admin</span>
-                <span id="user-name">Admin</span>
                 <a href="#" id="logout-btn">Logout</a>
             </div>
             <div class="theme-switch-wrapper">
@@ -39,6 +36,7 @@
 
     <div class="container">
         <h1>Admin Dashboard</h1>
+        <div id="admin-info" class="admin-info" style="margin-bottom:16px;font-weight: 500;color:var(--muted-color);"></div>
         
         <div class="dashboard-stats">
             <div class="stat-card">
@@ -122,9 +120,14 @@
                 return;
             }
             
-            // Display user information
+            // Display user information under the dashboard heading
             const user = authService.getUser();
-            document.getElementById('user-name').textContent = user.displayName;
+            const adminInfoEl = document.getElementById('admin-info');
+            if (adminInfoEl) {
+                const name = user.displayName || 'Admin';
+                const email = user.email || '';
+                adminInfoEl.textContent = `Admin: ${name}` + (email ? ` — ${email}` : '');
+            }
             
             // Add logout functionality
             document.getElementById('logout-btn').addEventListener('click', function(e) {
