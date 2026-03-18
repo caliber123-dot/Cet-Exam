@@ -9,6 +9,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <!-- SheetJS for Excel parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .btn {
+            padding: 8px 20px;
+            /* background-color: #3f28a7; */
+            border: #3f28a7 1px solid;
+            color: #3f28a7;
+            font-size: 14px;
+            /* border: none; */
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            /* background-color: #218838; */
+            border: #218838 1px solid;
+        }
+    </style>
 </head>
 
 <body>
@@ -55,8 +72,25 @@
                     <li>Explanation</li>
                     <li>Difficulty (1/2/3)</li>
                 </ol>
+                <p style="margin-bottom: 6px;"><b>Download the template to see the required format:</b> <i class="fa fa-download"></i></p>
+                 <a class="btn" onclick="downloadFile('CET_Reasoning_10_Questions.xlsx')"> <i class="fa fa-download"></i> Reasoning</a>
+                  <a class="btn" onclick="downloadFile('CET_Computer_Concepts_10_Questions.xlsx')"> <i class="fa fa-download"></i> Computer Concepts</a>
+                   <a class="btn" onclick="downloadFile('CET_Maths_10_Questions.xlsx')"> <i class="fa fa-download"></i> Maths</a>
+                    <a class="btn" onclick="downloadFile('CET_English_10_Questions.xlsx')"> <i class="fa fa-download"></i> English</a>
                 </div>
-                
+                <script>
+                    function downloadFile(filename) {
+                        // H:\BCA_Projects\MCA_Projects\Cet_Exam_App\models\download
+                        // const filePath = "/static/download/CET_Reasoning_10_Questions.xlsx";
+                        const filePath = "/static/download/" + filename;
+                        const link = document.createElement("a");
+                        link.href = filePath;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                </script>
                 <div class="form-group">
                     <label for="excel-category">Category/Subjects (applied to all questions)</label>
                     <select id="excel-category" class="form-control" required>
