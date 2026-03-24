@@ -21,19 +21,7 @@ class ExamService:
                        options: List[Dict], 
                        explanation: str,
                        difficulty_level: int = 1) -> str:
-        """
-        Create a new question in the database.
         
-        Args:
-            text: The question text
-            category: Subject category (reasoning, english, computer_concepts, python)
-            options: List of option dictionaries with text and is_correct flag
-            explanation: Explanation for the correct answer
-            difficulty_level: Difficulty level (1-Easy, 2-Medium, 3-Hard)
-            
-        Returns:
-            str: ID of the created question
-        """
         try:
             # Convert string category to enum if needed
             if isinstance(category, str):

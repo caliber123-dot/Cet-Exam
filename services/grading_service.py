@@ -1,32 +1,21 @@
-"""
-Grading service for the CET Exam App with PostgreSQL
-"""
 
 import uuid
 from datetime import datetime
-from typing import List, Dict, Optional, Tuple
+from typing import TypedDict, List, Dict, Optional, Tuple
 
 from database import db
 from models.sql_models import (
     Question, Option, Exam, ExamResult, ResultAnswer, 
     CategoryScore, Recommendation, User, SubjectCategory, ExamQuestion
 )
-
+class RecommendationType(TypedDict):
+        overall: List[str]
+        by_category: Dict[str, List[str]]
 class GradingService:
     """Service for grading exams and providing recommendations."""
     
     def grade_exam(self, user_id: str, exam_id: str, answers: Dict[str, str]) -> str:
-        """
-        Grade an exam based on user answers.
         
-        Args:
-            user_id: ID of the user taking the exam
-            exam_id: ID of the exam being taken
-            answers: Dictionary mapping question IDs to selected option IDs
-            
-        Returns:
-            str: ID of the created exam result
-        """
         try:
             # Get user and exam
             user = User.query.filter_by(uid=user_id).first()
@@ -161,7 +150,8 @@ class GradingService:
                     db.session.add(recommendation)
             
             db.session.commit()
-            return result.uuid
+            # return result.uuid
+            return str(result.uuid)
         except Exception as e:
             db.session.rollback()
             print(f"Error grading exam: {e}")
@@ -192,19 +182,16 @@ class GradingService:
             print(f"Error getting user results: {e}")
             return []
     
-    def _generate_recommendations(self, category_scores: Dict[str, float], 
-                                 question_results: Dict[str, Dict]) -> Dict[str, List[str]]:
-        """
-        Generate AI-based recommendations based on exam performance.
-        
-        Args:
-            category_scores: Dictionary mapping categories to percentage scores
-            question_results: Dictionary mapping question IDs to result data
-            
-        Returns:
-            Dictionary with recommendations by category and overall
-        """
-        recommendations = {
+    # def _generate_recommendations(self, category_scores: Dict[str, float], 
+    #                              question_results: Dict[str, Dict]) -> Dict[str, List[str]]:
+    
+
+    def _generate_recommendations(
+        self,
+        category_scores: Dict[str, float], 
+        question_results: Dict[str, Dict]
+    ) -> RecommendationType:
+        recommendations: RecommendationType = {
             'overall': [],
             'by_category': {}
         }
@@ -238,8 +225,8 @@ class GradingService:
                     cat_recommendations.append("Focus on grammar rules and vocabulary building.")
                 elif category == SubjectCategory.COMPUTER_CONCEPTS.value:
                     cat_recommendations.append("Study basic computer architecture and operating system concepts.")
-                elif category == SubjectCategory.PYTHON.value:
-                    cat_recommendations.append("Practice basic Python syntax and simple programming exercises.")
+                elif category == SubjectCategory.MATHS.value:
+                    cat_recommendations.append("Practice basic maths syntax and simple programming exercises.")
             
             elif score < 70:
                 cat_recommendations.append(f"You have a basic understanding of {readable_category}. Practice more complex problems.")
@@ -251,8 +238,8 @@ class GradingService:
                     cat_recommendations.append("Practice reading comprehension and sentence correction exercises.")
                 elif category == SubjectCategory.COMPUTER_CONCEPTS.value:
                     cat_recommendations.append("Learn about networking concepts and database fundamentals.")
-                elif category == SubjectCategory.PYTHON.value:
-                    cat_recommendations.append("Study data structures and algorithms in Python.")
+                elif category == SubjectCategory.MATHS.value:
+                    cat_recommendations.append("Study data structures and algorithms in maths.")
             
             else:
                 cat_recommendations.append(f"You have a good grasp of {readable_category}. Focus on advanced topics.")
@@ -264,8 +251,8 @@ class GradingService:
                     cat_recommendations.append("Work on advanced writing skills and complex comprehension passages.")
                 elif category == SubjectCategory.COMPUTER_CONCEPTS.value:
                     cat_recommendations.append("Explore cloud computing, cybersecurity, and emerging technologies.")
-                elif category == SubjectCategory.PYTHON.value:
-                    cat_recommendations.append("Learn advanced Python concepts like decorators, generators, and concurrent programming.")
+                elif category == SubjectCategory.MATHS.value:
+                    cat_recommendations.append("Learn advanced maths concepts like decorators, generators, and concurrent programming.")
             
             recommendations['by_category'][category] = cat_recommendations
         

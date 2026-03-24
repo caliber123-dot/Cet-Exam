@@ -10,16 +10,11 @@ from database import db
 import uuid
 
 class SubjectCategory(str, Enum):
-    """Enum for subject categories in the exam.
-
-    This enum is used for code references and initial seeding. The actual
-    set of categories available to administrators is stored in the
-    `SubjectCategoryModel` table, which allows adding new subjects at runtime.
-    """
+    
     REASONING = "reasoning"
     ENGLISH = "english"
     COMPUTER_CONCEPTS = "computer_concepts"
-    PYTHON = "python"
+    MATHS = "maths"
 
 
 class SubjectCategoryModel(db.Model):
